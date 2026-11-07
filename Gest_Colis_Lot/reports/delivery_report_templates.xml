@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_delivery_document_inherit_colis" inherit_id="stock.report_delivery_document">
+        <!-- Table stock_move_table (Mouvements simplifiés) -->
+        <xpath expr="//table[@name='stock_move_table']/thead/tr/th[1]" position="after">
+            <th class="text-start">Colis</th>
+        </xpath>
+        <xpath expr="//table[@name='stock_move_table']/tbody/tr/td[1]" position="after">
+            <td>
+                <span t-field="move.package_id.name"/>
+                <div t-if="move.package_id.photo" style="margin-top: 4px;">
+                    <img t-att-src="image_data_uri(move.package_id.photo)" style="max-height: 40px; border-radius: 2px;"/>
+                </div>
+            </td>
+        </xpath>
+    </template>
+</odoo>

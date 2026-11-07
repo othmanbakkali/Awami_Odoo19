@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- RECHERCHE AVANCÉE & FILTRES -->
+    <record id="view_report_facture_avance_search" model="ir.ui.view">
+        <field name="name">report.facture.avance.search</field>
+        <field name="model">report.facture.avance</field>
+        <field name="arch" type="xml">
+            <search string="Recherche Factures et Avances">
+                <!-- Recherche Rapide -->
+                <field name="reference" string="Référence"/>
+                <field name="partner_id" string="Client"/>
+                <field name="client" string="Nom Client"/>
+                <field name="payment_mode" string="Mode de Règlement"/>
+                <field name="check_number" string="N° Chèque / Effet"/>
+                <field name="check_client_name" string="Émetteur Chèque"/>
+                <field name="date" string="Date"/>
+
+                <!-- Filtres par Type de Mouvement -->
+                <filter name="filter_factures" string="Factures Uniquement" domain="[('line_type', '=', 'FACTURE')]"/>
+                <filter name="filter_avances" string="Avances Uniquement" domain="[('line_type', '=', 'AVANCE')]"/>
+
+                <separator/>
+                <!-- Filtres par Statut Financier -->
+                <filter name="filter_unpaid" string="Factures Impayées (Reste > 0)" domain="[('line_type', '=', 'FACTURE'), ('reste', '>', 0)]"/>
+                <filter name="filter_paid" string="Factures Soldées" domain="[('line_type', '=', 'FACTURE'), ('reste', '&lt;=', 0.005)]"/>
+
+                <separator/>
+                <!-- Filtres Visibilité (Hidden) -->
+                <filter name="filter_visible" string="Mouvements Visibles (Non Masqués)" domain="[('is_hidden', '=', False)]"/>
+                <filter name="filter_hidden" string="Mouvements Masqués (Hidden)" domain="[('is_hidden', '=', True)]"/>
+
+                <separator/>
+                <!-- Filtres par Période -->
+                <filter name="filter_today" string="Aujourd'hui" domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+
+                <!-- Regroupements -->
+                <group>
+                    <filter name="group_partner" string="Client" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_line_type" string="Type (Facture / Avance)" context="{'group_by': 'line_type'}"/>
+                    <filter name="group_payment_mode" string="Mode de Règlement" context="{'group_by': 'payment_mode'}"/>
+                    <filter name="group_statut" string="Statut" context="{'group_by': 'statut'}"/>
+                    <filter name="group_date_month" string="Date (Mois)" context="{'group_by': 'date:month'}"/>
+                    <filter name="group_date_day" string="Date (Jour)" context="{'group_by': 'date:day'}"/>
+                    <filter name="group_hidden" string="État Masqué" context="{'group_by': 'is_hidden'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- LIST / TREE (MODERNE ODOO 19) -->
+    <record id="view_report_facture_avance_list" model="ir.ui.view">
+        <field name="name">report.facture.avance.list</field>
+        <field name="model">report.facture.avance</field>
+        <field name="arch" type="xml">
+            <list string="Suivi Factures &amp; Avances" decoration-muted="is_hidden" default_order="date desc, id desc">
+                <button name="action_open_move" type="object" icon="fa-external-link" title="Ouvrir la pièce comptable"/>
+                <field name="is_hidden" string="Masqué" widget="boolean_toggle"/>
+                <button name="action_toggle_hidden" type="object" icon="fa-eye-slash" title="Masquer ce mouvement" invisible="is_hidden"/>
+                <button name="action_toggle_hidden" type="object" icon="fa-eye" title="Rendre ce mouvement visible" class="text-danger" invisible="not is_hidden"/>
+                <field name="date"/>
+                <field name="reference" decoration-bf="1"/>
+                <field name="partner_id" widget="many2one_avatar"/>
+                <field name="line_type" widget="badge" decoration-info="line_type == 'FACTURE'" decoration-success="line_type == 'AVANCE'"/>
+                <field name="total_facture" sum="Total Factures" widget="monetary"/>
+                <field name="avance" sum="Total Avances" widget="monetary"/>
+                <field name="reste" sum="Total Restant" widget="monetary" decoration-danger="reste > 0"/>
+                <field name="payment_mode" optional="show"/>
+                <field name="check_number" string="N° Chèque/Effet" optional="show"/>
+                <field name="statut" widget="badge" decoration-success="statut in ('paid', 'avance')" decoration-warning="statut in ('partial', 'in_payment')" decoration-danger="statut in ('not_paid', 'reversed')"/>
+                <field name="company_id" column_invisible="True"/>
+                <field name="currency_id" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- FORM VIEW -->
+    <record id="view_report_facture_avance_form" model="ir.ui.view">
+        <field name="name">report.facture.avance.form</field>
+        <field name="model">report.facture.avance</field>
+        <field name="arch" type="xml">
+            <form string="Détail Mouvement Facture / Avance" create="false" edit="false">
+                <header>
+                    <button name="action_open_move" type="object" string="Ouvrir la Pièce Comptable" class="btn-primary" icon="fa-external-link"/>
+                    <button name="action_toggle_hidden" type="object" string="Masquer du Rapport" icon="fa-eye-slash" invisible="is_hidden" class="btn-secondary"/>
+                    <button name="action_toggle_hidden" type="object" string="Rendre Visible" icon="fa-eye" invisible="not is_hidden" class="btn-warning"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <span class="o_form_label"><field name="line_type" readonly="1"/></span>
+                        <h1><field name="reference" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Informations Générales">
+                            <field name="partner_id" readonly="1"/>
+                            <field name="date" readonly="1"/>
+                            <field name="statut" readonly="1"/>
+                            <field name="payment_mode" readonly="1"/>
+                            <field name="check_number" readonly="1"/>
+                            <field name="check_client_name" readonly="1"/>
+                            <field name="is_hidden" readonly="1" widget="boolean_toggle"/>
+                        </group>
+                        <group string="Montants">
+                            <field name="currency_id" invisible="1"/>
+                            <field name="total_facture" widget="monetary" readonly="1"/>
+                            <field name="avance" widget="monetary" readonly="1"/>
+                            <field name="reste" widget="monetary" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- PIVOT -->
+    <record id="view_report_facture_avance_pivot" model="ir.ui.view">
+        <field name="name">report.facture.avance.pivot</field>
+        <field name="model">report.facture.avance</field>
+        <field name="arch" type="xml">
+            <pivot string="Analyse Factures &amp; Avances" sample="1">
+                <field name="partner_id" type="row"/>
+                <field name="line_type" type="col"/>
+                <field name="total_facture" type="measure"/>
+                <field name="avance" type="measure"/>
+                <field name="reste" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- GRAPH -->
+    <record id="view_report_facture_avance_graph" model="ir.ui.view">
+        <field name="name">report.facture.avance.graph</field>
+        <field name="model">report.facture.avance</field>
+        <field name="arch" type="xml">
+            <graph string="Graphique Factures &amp; Avances" type="bar" sample="1">
+                <field name="partner_id"/>
+                <field name="total_facture" type="measure"/>
+                <field name="avance" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- ACTIONS DE MASSE (SERVER ACTIONS) -->
+    <record id="action_server_hide_movements" model="ir.actions.server">
+        <field name="name">Masquer du rapport</field>
+        <field name="model_id" ref="model_report_facture_avance"/>
+        <field name="binding_model_id" ref="model_report_facture_avance"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+records.action_hide_movements()
+        </field>
+    </record>
+
+    <record id="action_server_unhide_movements" model="ir.actions.server">
+        <field name="name">Rendre visible dans le rapport</field>
+        <field name="model_id" ref="model_report_facture_avance"/>
+        <field name="binding_model_id" ref="model_report_facture_avance"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+records.action_unhide_movements()
+        </field>
+    </record>
+
+    <!-- ACTION PRINCIPALE -->
+    <record id="action_report_facture_avance" model="ir.actions.act_window">
+        <field name="name">Suivi Factures &amp; Avances</field>
+        <field name="res_model">report.facture.avance</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+        <field name="search_view_id" ref="view_report_facture_avance_search"/>
+        <field name="context">{
+            'search_default_filter_visible': 1
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aucun mouvement trouvé.
+            </p>
+            <p>
+                Ce rapport consolide l'ensemble des factures clients et des avances/règlements enregistrés.
+            </p>
+        </field>
+    </record>
+
+    <!-- MENUS -->
+    <menuitem id="menu_report_facture_root"
+              name="Reporting Personnalisé"
+              parent="account.menu_finance"
+              sequence="95"/>
+
+    <menuitem id="menu_report_facture_avance"
+              name="Suivi Factures &amp; Avances"
+              parent="menu_report_facture_root"
+              action="action_report_facture_avance"
+              sequence="10"/>
+
+    <menuitem id="menu_report_facture_avance_reporting"
+              name="Suivi Factures &amp; Avances"
+              parent="account.menu_finance_reports"
+              action="action_report_facture_avance"
+              sequence="50"/>
+
+</odoo>

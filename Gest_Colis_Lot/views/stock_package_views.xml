@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vue Formulaire héritée : stock.package -->
+        <record id="view_package_form_inherit_colis" model="ir.ui.view">
+            <field name="name">stock.package.form.inherit.colis</field>
+            <field name="model">stock.package</field>
+            <field name="inherit_id" ref="stock.stock_package_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//sheet" position="before">
+                    <header>
+                        <button name="action_sync_physical_content" string="Synchroniser le Contenu" type="object" class="oe_highlight"/>
+                    </header>
+                </xpath>
+                <xpath expr="//sheet" position="inside">
+                    <group string="Détails du Colis" name="colis_details">
+                        <group>
+                            <field name="photo" widget="image" class="oe_avatar" options="{'size': [128, 128]}"/>
+                            <field name="designation"/>
+                            <field name="supplier_ref"/>
+                        </group>
+                        <group>
+                            <field name="date_creation"/>
+                            <field name="state" widget="statusbar" statusbar_visible="available,partially_sold,sold,cancelled" options="{'clickable': '1'}"/>
+                            <field name="observations"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Composition du Colis (Déclarative)" name="composition_colis">
+                            <field name="colis_line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="qty_package"/>
+                                    <field name="product_uom_id"/>
+                                    <field name="dimensions"/>
+                                    <field name="qty_sold" readonly="1"/>
+                                    <field name="qty_available" readonly="1"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Vue Liste héritée : stock.package -->
+        <record id="view_package_tree_inherit_colis" model="ir.ui.view">
+            <field name="name">stock.package.tree.inherit.colis</field>
+            <field name="model">stock.package</field>
+            <field name="inherit_id" ref="stock.stock_package_view_list"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="designation" optional="show"/>
+                    <field name="supplier_ref" optional="show"/>
+                    <field name="date_creation" optional="show"/>
+                    <field name="state" decoration-success="state == 'available'" decoration-warning="state == 'partially_sold'" decoration-danger="state == 'sold'" decoration-info="state == 'cancelled'" widget="badge"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Vue Recherche héritée : stock.package -->
+        <record id="package_search_view_inherit_colis" model="ir.ui.view">
+            <field name="name">stock.package.search.inherit.colis</field>
+            <field name="model">stock.package</field>
+            <field name="inherit_id" ref="stock.stock_package_view_search"/>
+            <field name="arch" type="xml">
+                <!-- Ajouter les champs de recherche -->
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="supplier_ref"/>
+                    <field name="colis_line_ids" string="Produit" filter_domain="[('colis_line_ids.product_id', 'ilike', self)]"/>
+                </xpath>
+                <!-- Ajouter les filtres d'état -->
+                <xpath expr="//filter[@name='main_packages']" position="after">
+                    <filter string="Disponible" name="state_available" domain="[('state', '=', 'available')]"/>
+                    <filter string="Partiellement Vendu" name="state_partially" domain="[('state', '=', 'partially_sold')]"/>
+                    <filter string="Vendu" name="state_sold" domain="[('state', '=', 'sold')]"/>
+                    <filter string="Annulé" name="state_cancelled" domain="[('state', '=', 'cancelled')]"/>
+                </xpath>
+                <!-- Ajouter les filtres de regroupement dans le groupe existant -->
+                <xpath expr="//group" position="inside">
+                    <filter string="État du Colis" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Date de création" name="group_date" context="{'group_by': 'date_creation'}"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Renommer l'action et le menu natif des Packages en Colis -->
+        <record id="stock.action_package_view" model="ir.actions.act_window">
+            <field name="name">Colis</field>
+        </record>
+
+        <record id="stock.menu_package" model="ir.ui.menu">
+            <field name="name">Colis</field>
+        </record>
+    </data>
+</odoo>

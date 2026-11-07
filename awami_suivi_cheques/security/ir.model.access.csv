@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_suivi_cheque_user,suivi.cheque.user,model_suivi_cheque,account.group_account_invoice,1,1,1,0
+access_suivi_cheque_manager,suivi.cheque.manager,model_suivi_cheque,account.group_account_manager,1,1,1,1
+access_suivi_cheque_internal,suivi.cheque.internal,model_suivi_cheque,base.group_user,1,0,0,0
+

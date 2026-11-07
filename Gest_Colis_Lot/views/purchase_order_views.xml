@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vue Formulaire héritée : purchase.order -->
+        <record id="purchase_order_form_inherit_gest_colis" model="ir.ui.view">
+            <field name="name">purchase.order.form.inherit.gest.colis</field>
+            <field name="model">purchase.order</field>
+            <field name="inherit_id" ref="purchase.purchase_order_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='order_line']/list/field[@name='product_id']" position="before">
+                    <field name="package_id" optional="show" string="Colis"/>
+                    <field name="package_photo" widget="image" options="{'size': [32, 32]}" optional="show" string="Photo Colis"/>
+                    <field name="package_supplier_ref" optional="show" string="Réf Fournisseur Colis"/>
+                </xpath>
+                <xpath expr="//field[@name='order_line']/list/field[@name='product_qty']" position="after">
+                    <field name="longueur_totale" optional="show" string="Résultat"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

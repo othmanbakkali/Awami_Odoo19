@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Action Rapport Reçu A5 (2 Pages A5 séparées : Page 1 = Copie Client, Page 2 = Copie Contrôle) -->
+    <record id="action_report_invoice_a5_2pages" model="ir.actions.report">
+        <field name="name">Reçu A5 (2 Pages A5 : Client &amp; Contrôle)</field>
+        <field name="model">account.move</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">awami_bon_magasin.report_invoice_a5_2pages_template</field>
+        <field name="report_file">awami_bon_magasin.report_invoice_a5_2pages_template</field>
+        <field name="print_report_name">'Recu_A5_2Pages_' + (object.name or '').replace('/', '_')</field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="awami_bon_magasin.paperformat_a5_single"/>
+    </record>
+
+    <!-- Action Rapport Reçu A5 (Double Exemplaire sur la même page A4) -->
+    <record id="action_report_invoice_a5" model="ir.actions.report">
+        <field name="name">Reçu A5 (2 Bons sur la même page)</field>
+        <field name="model">account.move</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">awami_bon_magasin.report_invoice_a5_template</field>
+        <field name="report_file">awami_bon_magasin.report_invoice_a5_template</field>
+        <field name="print_report_name">'Recu_A5_' + (object.name or '').replace('/', '_')</field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="awami_bon_magasin.paperformat_a5_portrait"/>
+    </record>
+
+    <!-- Action Rapport Reçu A5 (1 Seul Exemplaire - Format Papier A5) -->
+    <record id="action_report_invoice_a5_single" model="ir.actions.report">
+        <field name="name">Reçu A5 (1 Seul Exemplaire)</field>
+        <field name="model">account.move</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">awami_bon_magasin.report_invoice_a5_single_template</field>
+        <field name="report_file">awami_bon_magasin.report_invoice_a5_single_template</field>
+        <field name="print_report_name">'Recu_A5_' + (object.name or '').replace('/', '_')</field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="awami_bon_magasin.paperformat_a5_single"/>
+    </record>
+
+    <!-- Template pour Un Bon A5 Compact, Lisible et Sans Chevauchement -->
+    <template id="report_invoice_a5_single_bon">
+        <meta charset="utf-8"/>
+        <div style="font-family: DejaVu Sans, Arial, sans-serif; font-size: 9.5px; color: #0f172a; padding: 0 1px; box-sizing: border-box;">
+            
+            <!-- 1. En-tête : Société à gauche, Client & Type de Copie à droite -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 2px;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top;">
+                        <table style="border-collapse: collapse;">
+                            <tr>
+                                <td t-if="o.company_id.logo" style="vertical-align: top; padding-right: 6px;">
+                                    <img t-att-src="image_data_uri(o.company_id.logo)" style="max-height: 32px; max-width: 110px; object-fit: contain;" alt="Logo"/>
+                                </td>
+                                <td style="vertical-align: top;">
+                                    <div style="font-weight: 800; font-size: 11px; color: #0f172a; line-height: 1.1;" t-field="o.company_id.name"/>
+                                    <div style="font-size: 8px; color: #475569; margin-top: 1px; line-height: 1.2;">
+                                        <span t-if="o.company_id.city"><t t-esc="o.company_id.city"/>, </span>
+                                        <span t-if="o.company_id.country_id" t-field="o.company_id.country_id.name"/>
+                                        <span t-else="">Maroc</span>
+                                        <span t-if="o.company_id.company_registry" style="margin-left: 3px;">| ICE: <span t-field="o.company_id.company_registry"/></span>
+                                        <span t-elif="o.company_id.vat" style="margin-left: 3px;">| ICE: <span t-field="o.company_id.vat"/></span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td style="width: 50%; vertical-align: top; text-align: right;">
+                        <div style="font-size: 12px; font-weight: 800; color: #0f172a; line-height: 1.2;">
+                            <span t-field="o.partner_id.name"/>
+                        </div>
+                        <t t-if="copy_label">
+                            <div style="display: inline-block; font-size: 8.5px; font-weight: 800; color: #0369a1; background-color: #e0f2fe; border: 1px solid #7dd3fc; padding: 1px 5px; border-radius: 3px; margin-top: 1px; text-transform: uppercase;">
+                                <span t-out="copy_label"/>
+                            </div>
+                        </t>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- 2. Titre du Reçu & Statut Financier -->
+            <table style="width: 100%; border-collapse: collapse; margin: 1px 0 3px 0;">
+                <tr>
+                    <td style="vertical-align: middle; text-align: left;">
+                        <span style="font-size: 14.5px; font-weight: 800; color: #0f172a;">
+                            <span t-if="o.move_type == 'out_invoice'">Reçu N° </span>
+                            <span t-elif="o.move_type == 'out_refund'">Avoir N° </span>
+                            <span t-field="o.name"/>
+                        </span>
+                    </td>
+                    <td style="vertical-align: middle; text-align: right;">
+                        <t t-if="o.payment_state in ('paid', 'in_payment') or (o.state == 'posted' and o.amount_residual == 0)">
+                            <span style="display: inline-block; padding: 1px 6px; font-size: 9px; font-weight: 800; border-radius: 3px; background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; text-transform: uppercase;">
+                                ● PAYÉ
+                            </span>
+                        </t>
+                        <t t-elif="o.payment_state == 'partial'">
+                            <span style="display: inline-block; padding: 1px 6px; font-size: 9px; font-weight: 800; border-radius: 3px; background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; text-transform: uppercase;">
+                                ● PARTIEL
+                            </span>
+                        </t>
+                        <t t-elif="o.state == 'posted' and o.payment_state == 'not_paid'">
+                            <span style="display: inline-block; padding: 1px 6px; font-size: 9px; font-weight: 800; border-radius: 3px; background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; text-transform: uppercase;">
+                                ● NON PAYÉ
+                            </span>
+                        </t>
+                        <t t-elif="o.state == 'draft'">
+                            <span style="display: inline-block; padding: 1px 6px; font-size: 8.5px; font-weight: 800; border-radius: 3px; background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; text-transform: uppercase;">
+                                BROUILLON
+                            </span>
+                        </t>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- 3. Ligne d'informations / Métadonnées en 5 colonnes -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 3px; font-size: 8.5px; line-height: 1.15; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 3px;">
+                <tr>
+                    <td style="width: 20%; padding: 2px 4px;">
+                        <div style="font-weight: 700; color: #64748b; font-size: 7.5px; text-transform: uppercase;">Date Reçu</div>
+                        <div style="color: #0f172a; font-weight: 600;">
+                            <span t-esc="o.invoice_date.strftime('%d/%m/%Y') if o.invoice_date else ''"/>
+                        </div>
+                    </td>
+                    <td style="width: 20%; padding: 2px 4px;">
+                        <div style="font-weight: 700; color: #64748b; font-size: 7.5px; text-transform: uppercase;">Échéance</div>
+                        <div style="color: #0f172a; font-weight: 600;">
+                            <span t-esc="o.invoice_date_due.strftime('%d/%m/%Y') if o.invoice_date_due else (o.invoice_date.strftime('%d/%m/%Y') if o.invoice_date else '')"/>
+                        </div>
+                    </td>
+                    <td style="width: 20%; padding: 2px 4px;">
+                        <div style="font-weight: 700; color: #64748b; font-size: 7.5px; text-transform: uppercase;">Livraison</div>
+                        <div style="color: #0f172a; font-weight: 600;">
+                            <span t-if="o.delivery_date" t-esc="o.delivery_date.strftime('%d/%m/%Y')"/>
+                            <span t-elif="o.invoice_date" t-esc="o.invoice_date.strftime('%d/%m/%Y')"/>
+                        </div>
+                    </td>
+                    <td style="width: 20%; padding: 2px 4px;">
+                        <div style="font-weight: 700; color: #64748b; font-size: 7.5px; text-transform: uppercase;">Origine / Source</div>
+                        <div style="color: #0f172a; font-weight: 600;">
+                            <span t-if="o.invoice_origin" t-field="o.invoice_origin"/>
+                            <span t-elif="o.ref" t-field="o.ref"/>
+                            <span t-else="">-</span>
+                        </div>
+                    </td>
+                    <td style="width: 20%; padding: 2px 4px;">
+                        <div style="font-weight: 700; color: #64748b; font-size: 7.5px; text-transform: uppercase;">Référence</div>
+                        <div style="color: #0f172a; font-weight: 600;">
+                            <span t-if="o.ref" t-field="o.ref"/>
+                            <span t-elif="o.invoice_origin" t-field="o.invoice_origin"/>
+                            <span t-else="">-</span>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- 4. Tableau des Articles -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 3px; font-size: 9px;">
+                <thead>
+                    <tr style="border-bottom: 1.5px solid #0f172a; background-color: #f1f5f9;">
+                        <th style="padding: 2px 4px; text-align: left; font-weight: 800; color: #0f172a; width: 46%;">Désignation</th>
+                        <th style="padding: 2px 4px; text-align: right; font-weight: 800; color: #0f172a; width: 20%;">Quantité</th>
+                        <th style="padding: 2px 4px; text-align: right; font-weight: 800; color: #0f172a; width: 16%;">P.U</th>
+                        <th style="padding: 2px 4px; text-align: right; font-weight: 800; color: #0f172a; width: 18%;">Montant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-foreach="o.invoice_line_ids.filtered(lambda l: not l.display_type or l.display_type == 'product')" t-as="line">
+                        <tr style="border-bottom: 0.5px solid #e2e8f0;">
+                            <td style="padding: 1.5px 4px; vertical-align: top; text-align: left;">
+                                <div style="color: #0f172a; font-weight: 600;">
+                                    <span t-if="line.product_id" t-field="line.product_id.name"/>
+                                    <span t-else="" t-field="line.name"/>
+                                </div>
+                                <t t-if="line.product_id and line.name and line.name != line.product_id.name">
+                                    <div style="font-size: 8px; color: #64748b;" t-field="line.name"/>
+                                </t>
+                                <t t-if="not line.is_adjustment_line and (line.is_m3 or (line.wood_length and line.wood_width))">
+                                    <div style="font-size: 7.5px; color: #0369a1; font-weight: 600;">
+                                        Dim : <span t-field="line.wood_length"/>m × <span t-field="line.wood_width"/>m × <span t-field="line.wood_thickness"/>m
+                                    </div>
+                                </t>
+                            </td>
+                            <td style="padding: 1.5px 4px; vertical-align: top; text-align: right;">
+                                <div style="font-weight: 600; color: #0f172a;">
+                                    <span t-if="line.is_adjustment_line">-</span>
+                                    <span t-elif="line.is_m3 or line.wood_length" t-esc="'%.5f' % line.quantity"/>
+                                    <span t-else="" t-esc="'%.2f' % line.quantity"/> <span t-if="not line.is_adjustment_line" t-field="line.product_uom_id.name" style="font-size: 8px; font-weight: normal; color: #475569;"/>
+                                </div>
+                                <t t-if="not line.is_adjustment_line and line.product_id and line.product_uom_id and line.product_uom_id != line.product_id.uom_id">
+                                    <t t-set="uom_ratio" t-value="line.product_uom_id.factor / (line.product_id.uom_id.factor or 1.0) if line.product_uom_id.factor else 1.0"/>
+                                    <t t-if="uom_ratio &gt; 1.0">
+                                        <div style="font-size: 7.5px; color: #64748b;">
+                                            (= <span t-esc="'%.2f' % (line.quantity * uom_ratio)"/> <span t-field="line.product_id.uom_id.name"/>)
+                                        </div>
+                                    </t>
+                                </t>
+                            </td>
+                            <td style="padding: 1.5px 4px; vertical-align: top; text-align: right; color: #334155;">
+                                <span t-esc="'%.2f' % line.price_unit"/>
+                            </td>
+                            <td style="padding: 1.5px 4px; vertical-align: top; text-align: right; font-weight: 700; color: #0f172a;">
+                                <span t-esc="'%.2f' % line.price_subtotal"/> <span t-field="o.currency_id.symbol" style="font-size: 8px; font-weight: normal;"/>
+                            </td>
+                        </tr>
+                    </t>
+                </tbody>
+            </table>
+
+            <!-- 5. Bas de page : Communication & Informations Chèque à gauche, Bloc TOTAL à droite -->
+            <t t-set="eff_mode" t-value="o._get_effective_payment_mode()"/>
+            <t t-set="eff_check_num" t-value="o._get_effective_check_number()"/>
+            <t t-set="eff_check_client" t-value="o._get_effective_check_client_name()"/>
+            <t t-set="eff_check_due" t-value="o._get_effective_check_date_due()"/>
+
+            <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 9px; border-top: 1.5px solid #0f172a; padding-top: 2px;">
+                <tr>
+                    <td style="width: 48%; vertical-align: top; padding-right: 6px;">
+                        <div style="color: #0f172a; font-size: 9.5px;">
+                            Communication : <strong><span t-field="o.name"/></strong>
+                        </div>
+                        <div style="font-size: 8.5px; color: #475569; margin-top: 2px; line-height: 1.25;">
+                            Mode de règlement : <strong style="color: #0f172a;"><span t-esc="dict(o._fields['payment_mode'].selection).get(eff_mode, eff_mode.capitalize())"/></strong>
+                            <t t-if="eff_check_num">
+                                <br/>N° série / Chèque : <strong style="color: #0f172a;"><span t-esc="eff_check_num"/></strong>
+                            </t>
+                            <t t-if="eff_check_client and eff_check_client != o.partner_id.name">
+                                <br/>Émetteur : <strong style="color: #0f172a;"><span t-esc="eff_check_client"/></strong>
+                            </t>
+                            <t t-if="eff_check_due">
+                                <br/>Échéance : <strong style="color: #0f172a;"><span t-esc="o._format_date_for_report(eff_check_due)"/></strong>
+                            </t>
+                        </div>
+                    </td>
+                    <td style="width: 52%; vertical-align: top;">
+                        <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a; background-color: #ffffff;">
+                            <!-- 1. Montant Total Principal Très Lisible -->
+                            <tr style="background-color: #0f172a; color: #ffffff;">
+                                <td style="padding: 2.5px 6px; font-weight: 800; font-size: 10.5px; text-transform: uppercase;">
+                                    TOTAL
+                                </td>
+                                <td style="padding: 2.5px 6px; font-weight: 900; font-size: 13px; text-align: right; white-space: nowrap;">
+                                    <span t-esc="'%.2f' % o.amount_total"/> <span t-field="o.currency_id.symbol"/>
+                                </td>
+                            </tr>
+
+                            <!-- 2. Règlements effectués (détails Chèque / Virement / Espèces avec date) -->
+                            <t t-set="report_payments" t-value="o._get_report_payment_lines()"/>
+                            <t t-foreach="report_payments" t-as="pay">
+                                <tr style="color: #334155; font-size: 8.5px; border-bottom: 0.5px dashed #cbd5e1; background-color: #f8fafc;">
+                                    <td style="padding: 1.5px 6px; text-align: left;">
+                                        <span style="font-weight: 600;" t-esc="pay['name']"/>
+                                        <t t-if="pay.get('date') and o.payment_state in ('paid', 'in_payment')">
+                                            <span style="font-size: 7.5px; color: #64748b;"> (<span t-esc="pay['date']"/>)</span>
+                                        </t>
+                                    </td>
+                                    <td style="padding: 1.5px 6px; text-align: right; font-weight: 700;">
+                                        <span t-esc="'%.2f' % pay['amount']"/> <span t-field="o.currency_id.symbol"/>
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <!-- 3. Reste à payer / Montant dû -->
+                            <tr t-if="o.state == 'posted' or o.payment_state in ('paid', 'in_payment', 'partial')" style="font-size: 9.5px; font-weight: 800; background-color: #ffffff;">
+                                <td style="padding: 2px 6px; text-align: left; color: #0f172a;">
+                                    <span>Montant Dû</span>
+                                </td>
+                                <td style="padding: 2px 6px; text-align: right; font-weight: 900;" t-att-style="'color: #16a34a;' if o.amount_residual == 0 else 'color: #dc2626;'">
+                                    <span t-esc="'%.2f' % o.amount_residual"/> <span t-field="o.currency_id.symbol"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Montant total en toutes lettres -->
+                        <div style="text-align: right; margin-top: 1px; font-size: 7.5px; color: #475569; line-height: 1.1;">
+                            <span>Arrêté à la somme de : </span>
+                            <strong style="color: #0f172a; font-style: italic;"><span t-esc="o.amount_total_words or o.currency_id.amount_to_text(o.amount_total)"/></strong>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </template>
+
+    <!-- Template Principal : 2 Pages A5 (Page 1 = COPIE CLIENT, Page 2 = COPIE CONTRÔLE) -->
+    <template id="report_invoice_a5_2pages_template">
+        <t t-call="web.html_container">
+            <meta charset="utf-8"/>
+            <t t-foreach="docs" t-as="o">
+                <!-- 1. PREMIÈRE PAGE A5 : COPIE CLIENT -->
+                <div class="page" style="font-family: DejaVu Sans, Arial, sans-serif; width: 100%; box-sizing: border-box; padding: 0; margin: 0; page-break-after: always; page-break-inside: avoid;">
+                    <meta charset="utf-8"/>
+                    <t t-set="copy_label" t-value="'(COPIE CLIENT)'"/>
+                    <t t-call="awami_bon_magasin.report_invoice_a5_single_bon"/>
+                </div>
+
+                <!-- 2. DEUXIÈME PAGE A5 : COPIE CONTRÔLE -->
+                <div class="page" t-att-style="'font-family: DejaVu Sans, Arial, sans-serif; width: 100%; box-sizing: border-box; padding: 0; margin: 0; page-break-inside: avoid;' + (' page-break-after: always;' if not o_last else ' page-break-after: avoid;')">
+                    <meta charset="utf-8"/>
+                    <t t-set="copy_label" t-value="'(COPIE CONTRÔLE)'"/>
+                    <t t-call="awami_bon_magasin.report_invoice_a5_single_bon"/>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- Template Principal : 2 Bons A5 sur la Même Page A4 -->
+    <template id="report_invoice_a5_template">
+        <t t-call="web.html_container">
+            <meta charset="utf-8"/>
+            <t t-foreach="docs" t-as="o">
+                <div class="page" t-att-style="'font-family: DejaVu Sans, Arial, sans-serif; width: 100%; box-sizing: border-box; padding: 0; margin: 0; page-break-inside: avoid;' + (' page-break-after: always;' if not o_last else ' page-break-after: avoid;')">
+                    <meta charset="utf-8"/>
+                    <!-- 1. PREMIER EXEMPLAIRE (HAUT DE PAGE) : COPIE CLIENT -->
+                    <div style="box-sizing: border-box; page-break-inside: avoid;">
+                        <t t-set="copy_label" t-value="'(COPIE CLIENT)'"/>
+                        <t t-call="awami_bon_magasin.report_invoice_a5_single_bon"/>
+                    </div>
+
+                    <!-- LIGNE DE DÉCOUPE / SÉPARATION MILIEU DE PAGE A4 (Avec espacement garanti) -->
+                    <div style="height: 5mm; text-align: center; margin: 3mm 0 2mm 0; position: relative; border-top: 1px dashed #94a3b8; box-sizing: border-box; page-break-inside: avoid;">
+                        <span style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 0 8px; font-size: 7.5px; color: #64748b; font-weight: bold; letter-spacing: 1px;">
+                            - - - - - - - - - - - - - - - - - DÉCOUPE MILIEU DE PAGE A4 - - - - - - - - - - - - - - - - -
+                        </span>
+                    </div>
+
+                    <!-- 2. DEUXIÈME EXEMPLAIRE (BAS DE PAGE) : COPIE CONTRÔLE -->
+                    <div style="box-sizing: border-box; page-break-inside: avoid;">
+                        <t t-set="copy_label" t-value="'(COPIE CONTRÔLE)'"/>
+                        <t t-call="awami_bon_magasin.report_invoice_a5_single_bon"/>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- Template Principal : 1 Seul Bon sur Page Format A5 -->
+    <template id="report_invoice_a5_single_template">
+        <t t-call="web.html_container">
+            <meta charset="utf-8"/>
+            <t t-foreach="docs" t-as="o">
+                <div class="page" t-att-style="'font-family: DejaVu Sans, Arial, sans-serif; width: 100%; box-sizing: border-box; padding: 0; margin: 0; page-break-inside: avoid;' + (' page-break-after: always;' if not o_last else ' page-break-after: avoid;')">
+                    <meta charset="utf-8"/>
+                    <t t-set="copy_label" t-value="'(COPIE CLIENT)'"/>
+                    <t t-call="awami_bon_magasin.report_invoice_a5_single_bon"/>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

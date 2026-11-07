@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Format A4 pour 2 Bons A5 sur la même feuille (Double exemplaire A4) -->
+    <record id="paperformat_a5_portrait" model="report.paperformat">
+        <field name="name">Format A4 - 2 Bons A5</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">4</field>
+        <field name="margin_bottom">8</field>
+        <field name="margin_left">8</field>
+        <field name="margin_right">8</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <!-- Format Papier A5 Paysage (210mm x 148mm) pour 1 ou 2 pages A5 -->
+    <record id="paperformat_a5_single" model="report.paperformat">
+        <field name="name">Format A5 Paysage - 1 Seul Bon</field>
+        <field name="default" eval="False"/>
+        <field name="format">A5</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">4</field>
+        <field name="margin_bottom">6</field>
+        <field name="margin_left">8</field>
+        <field name="margin_right">8</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+</odoo>

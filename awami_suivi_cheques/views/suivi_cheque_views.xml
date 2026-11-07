@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================================================================= -->
+    <!-- VUE LISTE (TREE)                                                  -->
+    <!-- ================================================================= -->
+    <record id="view_suivi_cheque_tree" model="ir.ui.view">
+        <field name="name">suivi.cheque.tree</field>
+        <field name="model">suivi.cheque</field>
+        <field name="arch" type="xml">
+            <list string="Suivi des Chèques et Effets"
+                  decoration-danger="is_overdue and state not in ('paye', 'annule')"
+                  decoration-success="state == 'paye'"
+                  decoration-warning="state in ('depose', 'retour_banque')"
+                  decoration-muted="state == 'annule'">
+                <field name="name" string="Réf" optional="hide"/>
+                <field name="date_reception" string="Réception"/>
+                <field name="check_date_due" string="Échéance" widget="date"/>
+                <field name="due_status" string="Alerte" widget="badge"
+                       decoration-danger="due_status == 'overdue'"
+                       decoration-warning="due_status == 'today'"
+                       decoration-success="due_status == 'future'"
+                       optional="show"/>
+                <field name="check_number" string="N° Chèque / Effet" class="fw-bold"/>
+                <field name="partner_id" string="Client / Fournisseur"/>
+                <field name="check_client_name" string="Tireur / Émetteur" optional="show"/>
+                <field name="bank_name" string="Banque" optional="show"/>
+                <field name="amount" string="Montant" widget="monetary" sum="Total"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="payment_mode" string="Nature" widget="badge" optional="show"/>
+                <field name="check_type" string="Type" widget="badge" optional="hide"/>
+                <field name="state" string="Statut" widget="badge"
+                       decoration-success="state == 'paye'"
+                       decoration-danger="state == 'impaye'"
+                       decoration-warning="state == 'retour_banque'"
+                       decoration-info="state == 'depose'"
+                       decoration-muted="state == 'en_caisse'"/>
+                <field name="date_cleared" string="Date Encaissement" optional="hide"/>
+                <field name="date_rejection" string="Date Rejet" optional="hide"/>
+                <field name="rejection_reason" string="Motif Rejet" optional="hide"/>
+                <field name="payment_id" string="Paiement" optional="hide"/>
+                <field name="is_overdue" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- VUE FORMULAIRE (FORM)                                             -->
+    <!-- ================================================================= -->
+    <record id="view_suivi_cheque_form" model="ir.ui.view">
+        <field name="name">suivi.cheque.form</field>
+        <field name="model">suivi.cheque</field>
+        <field name="arch" type="xml">
+            <form string="Suivi du Chèque / Effet">
+                <header>
+                    <!-- Boutons d'action rapides -->
+                    <button name="action_deposer" string="Déposer à la banque" type="object"
+                            class="oe_highlight" invisible="state != 'en_caisse'"/>
+                    
+                    <button name="action_payer" string="Marquer Payé / Encaissé" type="object"
+                            class="btn-success" invisible="state in ('paye', 'annule')"/>
+                    
+                    <button name="action_retour_banque" string="Retour de la Banque" type="object"
+                            class="btn-warning" invisible="state in ('retour_banque', 'impaye', 'annule')"/>
+                    
+                    <button name="action_impaye" string="Déclarer Impayé" type="object"
+                            class="btn-danger" invisible="state in ('impaye', 'annule')"/>
+                    
+                    <button name="action_remettre_en_caisse" string="Remettre en Portefeuille" type="object"
+                            invisible="state == 'en_caisse'"/>
+                    
+                    <button name="action_annuler" string="Annuler" type="object"
+                            invisible="state in ('paye', 'annule')"/>
+
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="en_caisse,depose,paye,retour_banque,impaye"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_payment" type="object" class="oe_stat_button"
+                                icon="fa-money" invisible="not payment_id">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Paiement</span>
+                                <span class="o_stat_text">Comptable</span>
+                            </div>
+                        </button>
+                        <button name="action_view_invoices" type="object" class="oe_stat_button"
+                                icon="fa-pencil-square-o" invisible="invoice_count == 0">
+                            <field name="invoice_count" widget="statinfo" string="Factures"/>
+                        </button>
+                    </div>
+
+                    <!-- Alerte visuelle pour Chèques Impayés ou Retours Banque -->
+                    <div class="alert alert-danger mb-3" role="status" invisible="state not in ('impaye', 'retour_banque')">
+                        <h4 class="alert-heading fw-bold mb-1">
+                            <i class="fa fa-exclamation-triangle me-2" title="Alerte Rejet"/>
+                            <span invisible="state != 'impaye'">CHÈQUE DÉCLARÉ IMPAYÉ</span>
+                            <span invisible="state != 'retour_banque'">CHÈQUE RETOURNÉ PAR LA BANQUE</span>
+                        </h4>
+                        <div invisible="not rejection_reason">
+                            Motif : <strong><field name="rejection_reason" readonly="1"/></strong>
+                        </div>
+                        <div invisible="not rejection_notes">
+                            Détails : <field name="rejection_notes" readonly="1"/>
+                        </div>
+                    </div>
+
+                    <!-- Alerte visuelle pour échéance dépassée -->
+                    <div class="alert alert-warning mb-3" role="status" invisible="not is_overdue or state in ('paye', 'annule')">
+                        <i class="fa fa-clock-o me-2" title="Échéance dépassée"/>
+                        <strong>Attention :</strong> Ce chèque a dépassé sa date d'échéance (<field name="check_date_due" readonly="1"/>).
+                    </div>
+
+                    <div class="oe_title">
+                        <span class="o_primary_label">
+                            <field name="payment_mode" widget="radio" options="{'horizontal': true}"/>
+                        </span>
+                        <h1>
+                            <field name="check_number" placeholder="N° de Chèque / Effet"/>
+                        </h1>
+                        <h3 class="text-muted">
+                            <field name="partner_id" placeholder="Client ou Fournisseur"/>
+                        </h3>
+                    </div>
+
+                    <group>
+                        <group string="Informations du Règlement">
+                            <field name="check_type" widget="radio"/>
+                            <field name="check_client_name"/>
+                            <field name="amount" widget="monetary"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="is_overdue" invisible="1"/>
+                        </group>
+
+                        <group string="Dates &amp; Suivi Bancaire">
+                            <field name="date_reception"/>
+                            <field name="check_date_due"/>
+                            <field name="due_status" widget="badge"
+                                   decoration-danger="due_status == 'overdue'"
+                                   decoration-warning="due_status == 'today'"
+                                   decoration-success="due_status == 'future'"
+                                   invisible="not due_status"/>
+                            <field name="bank_name"/>
+                            <field name="bank_account"/>
+                            <field name="deposit_journal_id" invisible="state == 'en_caisse'"/>
+                            <field name="date_deposit" invisible="state == 'en_caisse'"/>
+                            <field name="date_cleared" invisible="state != 'paye'"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- Onglet Rejet / Retour Banque (mis en valeur si rejet) -->
+                        <page string="Retour / Rejet Banque" name="page_rejection"
+                              invisible="state not in ('retour_banque', 'impaye') and not rejection_reason">
+                            <group>
+                                <group>
+                                    <field name="date_rejection"/>
+                                    <field name="rejection_reason"/>
+                                </group>
+                            </group>
+                            <group string="Commentaires et Relances">
+                                <field name="rejection_notes" nolabel="1" placeholder="Historique des relances auprès du client, promesses de règlement, actions engagées..."/>
+                            </group>
+                        </page>
+
+                        <!-- Onglet Comptabilité -->
+                        <page string="Comptabilité &amp; Factures" name="page_compta">
+                            <group>
+                                <group string="Paiement">
+                                    <field name="payment_id" readonly="1"/>
+                                    <field name="journal_id" readonly="1"/>
+                                    <field name="move_id" readonly="1"/>
+                                </group>
+                            </group>
+                            <separator string="Factures réglées par ce chèque"/>
+                            <field name="invoice_ids" readonly="1">
+                                <list>
+                                    <field name="name" string="Facture"/>
+                                    <field name="invoice_date" string="Date"/>
+                                    <field name="partner_id" string="Client"/>
+                                    <field name="amount_total_signed" string="Total TTC"/>
+                                    <field name="payment_state" widget="badge" string="Statut Paiement"/>
+                                    <field name="state" widget="badge" string="État"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <!-- Onglet Notes -->
+                        <page string="Notes Internes" name="page_notes">
+                            <field name="notes" placeholder="Notes ou observations internes..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <!-- Chatter pour le suivi et les rappels -->
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- VUE KANBAN                                                        -->
+    <!-- ================================================================= -->
+    <record id="view_suivi_cheque_kanban" model="ir.ui.view">
+        <field name="name">suivi.cheque.kanban</field>
+        <field name="model">suivi.cheque</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column" records_draggable="1">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="check_number"/>
+                <field name="partner_id"/>
+                <field name="check_client_name"/>
+                <field name="amount"/>
+                <field name="currency_id"/>
+                <field name="check_date_due"/>
+                <field name="state"/>
+                <field name="is_overdue"/>
+                <field name="due_status"/>
+                <field name="payment_mode"/>
+                <field name="check_type"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex flex-column gap-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong class="fs-5 text-primary">
+                                    <t t-esc="record.check_number.value"/>
+                                </strong>
+                                <span t-if="record.payment_mode.raw_value == 'effet'" class="badge bg-warning text-dark">
+                                    Effet
+                                </span>
+                                <span t-else="" class="badge bg-light text-dark">
+                                    Chèque
+                                </span>
+                            </div>
+
+                            <div class="text-truncate">
+                                <span class="fw-bold"><t t-esc="record.partner_id.value"/></span>
+                            </div>
+                            
+                            <div t-if="record.check_client_name.raw_value and record.check_client_name.raw_value != record.partner_id.value"
+                                 class="text-muted small">
+                                Tireur : <t t-esc="record.check_client_name.value"/>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top">
+                                <span class="fs-6 fw-bolder text-dark">
+                                    <field name="amount" widget="monetary"/>
+                                </span>
+                                <span t-if="record.check_date_due.raw_value">
+                                    <span t-if="record.due_status.raw_value == 'overdue'" class="badge bg-danger">
+                                        Échu : <t t-esc="record.check_date_due.value"/>
+                                    </span>
+                                    <span t-elif="record.due_status.raw_value == 'today'" class="badge bg-warning text-dark">
+                                        Aujourd'hui
+                                    </span>
+                                    <span t-else="" class="badge bg-light text-muted">
+                                        <t t-esc="record.check_date_due.value"/>
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- VUE RECHERCHE (SEARCH) & FILTRES                                  -->
+    <!-- ================================================================= -->
+    <record id="view_suivi_cheque_search" model="ir.ui.view">
+        <field name="name">suivi.cheque.search</field>
+        <field name="model">suivi.cheque</field>
+        <field name="arch" type="xml">
+            <search string="Recherche Chèques et Effets">
+                <field name="check_number" string="N° de Chèque"/>
+                <field name="partner_id" string="Client / Fournisseur"/>
+                <field name="check_client_name" string="Tireur / Émetteur"/>
+                <field name="bank_name" string="Banque"/>
+                <field name="name" string="Référence"/>
+
+                <!-- Filtres Types -->
+                <filter string="Chèques Clients" name="filter_inbound"
+                        domain="[('check_type', '=', 'inbound')]"/>
+                <filter string="Chèques Fournisseurs" name="filter_outbound"
+                        domain="[('check_type', '=', 'outbound')]"/>
+                <separator/>
+
+                <!-- Filtres Statuts -->
+                <filter string="En Portefeuille" name="filter_en_caisse"
+                        domain="[('state', '=', 'en_caisse')]"/>
+                <filter string="Déposés à la Banque" name="filter_depose"
+                        domain="[('state', '=', 'depose')]"/>
+                <filter string="Payés / Encaissés" name="filter_paye"
+                        domain="[('state', '=', 'paye')]"/>
+                <filter string="Retour de la Banque" name="filter_retour_banque"
+                        domain="[('state', '=', 'retour_banque')]"/>
+                <filter string="Impayés" name="filter_impaye"
+                        domain="[('state', '=', 'impaye')]"/>
+                <separator/>
+
+                <!-- Alertes & Échéances -->
+                <filter string="Échus / En Retard" name="filter_overdue"
+                        domain="[('is_overdue', '=', True), ('state', 'not in', ('paye', 'annule'))]"/>
+                <filter string="Échéance Aujourd'hui" name="filter_today"
+                        domain="[('check_date_due', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter string="Échéance ce Mois" name="filter_this_month"
+                        domain="[('check_date_due', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+
+                <!-- Regroupements -->
+                <separator/>
+                <filter string="Statut" name="group_state" domain="[]" context="{'group_by': 'state'}"/>
+                <filter string="Partenaire" name="group_partner" domain="[]" context="{'group_by': 'partner_id'}"/>
+                <filter string="Date d'Échéance (Mois)" name="group_due_date" domain="[]" context="{'group_by': 'check_date_due:month'}"/>
+                <filter string="Banque Émettrice" name="group_bank" domain="[]" context="{'group_by': 'bank_name'}"/>
+                <filter string="Type (Client / Fournisseur)" name="group_type" domain="[]" context="{'group_by': 'check_type'}"/>
+                <filter string="Nature (Chèque / Effet)" name="group_nature" domain="[]" context="{'group_by': 'payment_mode'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- VUE PIVOT & GRAPHIQUE                                             -->
+    <!-- ================================================================= -->
+    <record id="view_suivi_cheque_pivot" model="ir.ui.view">
+        <field name="name">suivi.cheque.pivot</field>
+        <field name="model">suivi.cheque</field>
+        <field name="arch" type="xml">
+            <pivot string="Analyse des Chèques et Effets">
+                <field name="state" type="col"/>
+                <field name="check_date_due" interval="month" type="row"/>
+                <field name="amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_suivi_cheque_graph" model="ir.ui.view">
+        <field name="name">suivi.cheque.graph</field>
+        <field name="model">suivi.cheque</field>
+        <field name="arch" type="xml">
+            <graph string="Montant des Chèques par Statut" type="bar">
+                <field name="state"/>
+                <field name="amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- ACTIONS DE FENÊTRE (WINDOW ACTIONS)                               -->
+    <!-- ================================================================= -->
+
+    <!-- 1. Tous les Chèques et Effets -->
+    <record id="action_suivi_cheque_all" model="ir.actions.act_window">
+        <field name="name">Tous les Chèques &amp; Effets</field>
+        <field name="res_model">suivi.cheque</field>
+        <field name="view_mode">kanban,list,form,pivot,graph</field>
+        <field name="search_view_id" ref="view_suivi_cheque_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aucun chèque ou effet enregistré
+            </p>
+            <p>
+                Les chèques sont automatiquement créés à partir des paiements saisis avec le mode Chèque ou Effet.
+            </p>
+        </field>
+    </record>
+
+    <!-- 2. Chèques Clients (Inbound) -->
+    <record id="action_suivi_cheque_client" model="ir.actions.act_window">
+        <field name="name">Chèques &amp; Effets Clients</field>
+        <field name="res_model">suivi.cheque</field>
+        <field name="view_mode">kanban,list,form,pivot,graph</field>
+        <field name="domain">[('check_type', '=', 'inbound')]</field>
+        <field name="context">{'default_check_type': 'inbound'}</field>
+        <field name="search_view_id" ref="view_suivi_cheque_search"/>
+    </record>
+
+    <!-- 3. Chèques Fournisseurs (Outbound) -->
+    <record id="action_suivi_cheque_fournisseur" model="ir.actions.act_window">
+        <field name="name">Chèques &amp; Effets Fournisseurs</field>
+        <field name="res_model">suivi.cheque</field>
+        <field name="view_mode">kanban,list,form,pivot,graph</field>
+        <field name="domain">[('check_type', '=', 'outbound')]</field>
+        <field name="context">{'default_check_type': 'outbound'}</field>
+        <field name="search_view_id" ref="view_suivi_cheque_search"/>
+    </record>
+
+    <!-- 4. Impayés et Retours Banque -->
+    <record id="action_suivi_cheque_impaye" model="ir.actions.act_window">
+        <field name="name">Chèques Impayés &amp; Retours Banque</field>
+        <field name="res_model">suivi.cheque</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="domain">[('state', 'in', ('impaye', 'retour_banque'))]</field>
+        <field name="search_view_id" ref="view_suivi_cheque_search"/>
+    </record>
+
+</odoo>

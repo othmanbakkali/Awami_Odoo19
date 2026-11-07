@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue Liste / Tree -->
+    <record id="view_account_sales_expense_report_tree" model="ir.ui.view">
+        <field name="name">account.sales.expense.report.tree</field>
+        <field name="model">account.sales.expense.report</field>
+        <field name="arch" type="xml">
+            <list string="Rapports Journaliers Ventes &amp; Dépenses" decoration-info="report_type == 'x'" decoration-success="net_result &gt;= 0" decoration-danger="net_result &lt; 0">
+                <field name="name" string="Numéro"/>
+                <field name="report_type" widget="badge" decoration-info="report_type == 'x'" decoration-primary="report_type == 'z'"/>
+                <field name="date_start" string="Date Début"/>
+                <field name="date_end" string="Date Fin"/>
+                <field name="sales_total_net" string="Ventes Nettes" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="hr_expenses_total" string="Dépenses RH &amp; Salaires" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="expenses_total_net" string="Charges Fournisseurs" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide"/>
+                <field name="direct_cash_expenses_total" string="Dép. Caisse Directes" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide"/>
+                <field name="total_expenses_all" string="Total Dépenses" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="net_result" string="Résultat Net" widget="monetary" options="{'currency_field': 'currency_id'}" decoration-bf="1"/>
+                <field name="net_cashbox" string="Solde Caisse" widget="monetary" options="{'currency_field': 'currency_id'}" decoration-bf="1"/>
+                <field name="user_id" string="Utilisateur"/>
+                <field name="date_generation" string="Date Édition" widget="datetime"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vue Formulaire -->
+    <record id="view_account_sales_expense_report_form" model="ir.ui.view">
+        <field name="name">account.sales.expense.report.form</field>
+        <field name="model">account.sales.expense.report</field>
+        <field name="arch" type="xml">
+            <form string="Rapport Journalier Ventes &amp; Dépenses">
+                <header>
+                    <button name="action_print_pdf" string="Imprimer PDF" type="object" class="btn-primary" icon="fa-print"/>
+                    <button name="action_refresh" string="Actualiser les données" type="object" class="btn-secondary" icon="fa-refresh"
+                            invisible="report_type == 'z'"/>
+                    <field name="report_type" widget="statusbar" statusbar_visible="x,z"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <span class="o_form_label">Rapport Journalier Ventes &amp; Dépenses</span>
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+
+                    <!-- Paramètres du rapport -->
+                    <group>
+                        <group string="Période &amp; Société">
+                            <field name="date_start" readonly="report_type == 'z'"/>
+                            <field name="date_end" readonly="report_type == 'z'"/>
+                            <field name="company_id" readonly="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Détails de Génération">
+                            <field name="date_generation" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
+                            <field name="invoice_state" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Cartes Synthèse Financière -->
+                    <div class="row mt-3 mb-3 text-center">
+                        <div class="col-md-3">
+                            <div class="card bg-success-subtle border-success p-2">
+                                <span class="text-success fw-bold">VENTES NETTES TTC</span>
+                                <h3 class="fw-bolder text-success">
+                                    <field name="sales_total_net" widget="monetary"/>
+                                </h3>
+                                <small class="text-muted"><field name="invoice_count"/> facture(s)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger-subtle border-danger p-2">
+                                <span class="text-danger fw-bold">TOTAL DÉPENSES &amp; CHARGES</span>
+                                <h3 class="fw-bolder text-danger">
+                                    <field name="total_expenses_all" widget="monetary"/>
+                                </h3>
+                                <small class="text-muted">
+                                    RH: <field name="hr_expenses_total" widget="monetary"/> (<field name="hr_expenses_count"/>)
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-primary-subtle border-primary p-2">
+                                <span class="text-primary fw-bold">RÉSULTAT NET JOURNALIER</span>
+                                <h3 class="fw-bolder text-primary">
+                                    <field name="net_result" widget="monetary"/>
+                                </h3>
+                                <small class="text-muted">Ventes - Dépenses</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info-subtle border-info p-2">
+                                <span class="text-info fw-bold">SOLDE NET CAISSE (ESPÈCES)</span>
+                                <h3 class="fw-bolder text-info">
+                                    <field name="net_cashbox" widget="monetary"/>
+                                </h3>
+                                <small class="text-muted">Tiroir-Caisse Théorique</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Onglets Détails -->
+                    <notebook>
+                        <page string="Notes de Frais &amp; Salaires Journaliers (Dépenses RH)" name="hr_expenses">
+                            <field name="hr_expense_ids" readonly="1">
+                                <list string="Notes de Frais &amp; Salaires Journaliers">
+                                    <field name="date" string="Date"/>
+                                    <field name="name" string="Description / Bénéficiaire"/>
+                                    <field name="product_id" string="Catégorie"/>
+                                    <field name="employee_id" string="Employé"/>
+                                    <field name="payment_mode" string="Payé par"/>
+                                    <field name="total_amount" string="Total TTC" widget="monetary"/>
+                                    <field name="state" widget="badge" string="Statut"
+                                           decoration-success="state in ('approved', 'done')"
+                                           decoration-info="state == 'reported'"
+                                           decoration-muted="state == 'draft'"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Factures de Vente (Clients)" name="sales">
+                            <field name="invoice_ids" readonly="1">
+                                <list string="Factures de Vente">
+                                    <field name="date" string="Date"/>
+                                    <field name="name" string="Facture"/>
+                                    <field name="partner_id" string="Client"/>
+                                    <field name="amount_untaxed" string="Total HT" optional="hide"/>
+                                    <field name="amount_total" string="Total TTC"/>
+                                    <field name="amount_residual" string="Reste Dû"/>
+                                    <field name="payment_state" widget="badge" string="Statut"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Dépenses &amp; Factures d'Achat (Charges)" name="expenses">
+                            <field name="expense_ids" readonly="1">
+                                <list string="Factures d'Achat &amp; Charges">
+                                    <field name="date" string="Date"/>
+                                    <field name="name" string="N° Pièce"/>
+                                    <field name="ref" string="Réf Fournisseur"/>
+                                    <field name="partner_id" string="Fournisseur / Bénéficiaire"/>
+                                    <field name="amount_untaxed" string="Total HT" optional="hide"/>
+                                    <field name="amount_total" string="Total TTC"/>
+                                    <field name="amount_residual" string="Reste Dû"/>
+                                    <field name="payment_state" widget="badge" string="Statut"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Dépenses Directes de Caisse (Menues Dépenses)" name="direct_cash">
+                            <field name="payment_ids" readonly="1">
+                                <list string="Décaissements Directs">
+                                    <field name="date" string="Date"/>
+                                    <field name="name" string="Paiement"/>
+                                    <field name="partner_id" string="Bénéficiaire"/>
+                                    <field name="memo" string="Motif / Justification"/>
+                                    <field name="journal_id" string="Journal de Caisse"/>
+                                    <field name="amount" string="Montant" widget="monetary"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Fichiers &amp; Exports" name="exports">
+                            <group string="Téléchargements">
+                                <field name="excel_filename" invisible="1"/>
+                                <field name="excel_file" filename="excel_filename" widget="binary" readonly="1"/>
+                                <field name="csv_filename" invisible="1"/>
+                                <field name="csv_file" filename="csv_filename" widget="binary" readonly="1"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vue Recherche / Filtres -->
+    <record id="view_account_sales_expense_report_search" model="ir.ui.view">
+        <field name="name">account.sales.expense.report.search</field>
+        <field name="model">account.sales.expense.report</field>
+        <field name="arch" type="xml">
+            <search string="Recherche Rapports Ventes et Dépenses">
+                <field name="name"/>
+                <field name="user_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <filter string="Rapports Z (Clôtures)" name="filter_z" domain="[('report_type', '=', 'z')]"/>
+                <filter string="Rapports X (Provisoires)" name="filter_x" domain="[('report_type', '=', 'x')]"/>
+                <separator/>
+                <group>
+                    <filter string="Utilisateur" name="group_user" domain="[]" context="{'group_by': 'user_id'}"/>
+                    <filter string="Type de Rapport" name="group_type" domain="[]" context="{'group_by': 'report_type'}"/>
+                    <filter string="Société" name="group_company" domain="[]" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action Fenêtre pour l'historique -->
+    <record id="action_account_sales_expense_report_history" model="ir.actions.act_window">
+        <field name="name">Historique des Rapports Ventes &amp; Dépenses</field>
+        <field name="res_model">account.sales.expense.report</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_account_sales_expense_report_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aucun rapport généré pour l'instant.
+            </p>
+            <p>
+                Utilisez le menu <strong>"Générer un Rapport"</strong> pour créer votre première synthèse journalière des ventes et dépenses.
+            </p>
+        </field>
+    </record>
+</odoo>

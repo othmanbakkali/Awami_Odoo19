@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================================================================= -->
+    <!-- 1. APPLICATION & MENU PRINCIPAL DÉDIÉ "SUIVI DES CHÈQUES"          -->
+    <!-- ================================================================= -->
+    <menuitem id="menu_suivi_cheque_root"
+              name="Suivi des Chèques"
+              sequence="45"/>
+
+    <menuitem id="menu_suivi_cheque_dashboard"
+              name="Tableau de Bord (Tous)"
+              parent="menu_suivi_cheque_root"
+              action="action_suivi_cheque_all"
+              sequence="10"/>
+
+    <menuitem id="menu_suivi_cheque_client_main"
+              name="Chèques &amp; Effets Clients"
+              parent="menu_suivi_cheque_root"
+              action="action_suivi_cheque_client"
+              sequence="20"/>
+
+    <menuitem id="menu_suivi_cheque_fournisseur_main"
+              name="Chèques &amp; Effets Fournisseurs"
+              parent="menu_suivi_cheque_root"
+              action="action_suivi_cheque_fournisseur"
+              sequence="30"/>
+
+    <menuitem id="menu_suivi_cheque_impaye_main"
+              name="Impayés &amp; Retours Banque"
+              parent="menu_suivi_cheque_root"
+              action="action_suivi_cheque_impaye"
+              sequence="40"/>
+
+    <!-- ================================================================= -->
+    <!-- 2. INTÉGRATION DANS LES MENUS COMPTABILITÉ / FACTURATION          -->
+    <!-- ================================================================= -->
+    <!-- Menu Facturation > Clients > Suivi des Chèques Clients -->
+    <menuitem id="menu_suivi_cheque_client_invoicing"
+              name="Suivi des Chèques Clients"
+              parent="account.menu_finance_receivables"
+              action="action_suivi_cheque_client"
+              sequence="25"/>
+
+    <!-- Menu Facturation > Fournisseurs > Suivi des Chèques Fournisseurs -->
+    <menuitem id="menu_suivi_cheque_fournisseur_invoicing"
+              name="Suivi des Chèques Fournisseurs"
+              parent="account.menu_finance_payables"
+              action="action_suivi_cheque_fournisseur"
+              sequence="25"/>
+
+</odoo>
+

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-inherit="point_of_sale.ControlButtons" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('control-buttons')]" position="inside">
+            <button t-if="this.pos.config.omax_session_z_report"
+                    t-att-class="buttonClass"
+                    t-on-click="() => this.clickSessionZReport()">
+                <i class="fa fa-calculator me-1" role="img" aria-label="Session Z Report" title="Session Z Report"/>
+                Session Z Report
+            </button>
+        </xpath>
+    </t>
+</templates>
+

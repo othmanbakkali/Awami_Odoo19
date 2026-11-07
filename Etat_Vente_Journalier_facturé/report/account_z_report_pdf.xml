@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_z_document_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <!-- Fetch all computed data from Python model -->
+                <t t-set="data" t-value="o.get_report_data()"/>
+                
+                <div class="article" t-att-data-oe-model="o._name" t-att-data-oe-id="o.id">
+                    <meta charset="utf-8"/>
+                    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+                    
+                    <style>
+                        /* Base et Reset pour wkhtmltopdf - Typographie Grande Lisibilite */
+                        .z-page {
+                            font-family: 'DejaVu Sans', 'Liberation Sans', Arial, Helvetica, sans-serif !important;
+                            font-size: 10pt;
+                            color: #000000;
+                            line-height: 1.3;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        .z-table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 14px;
+                            table-layout: fixed;
+                        }
+                        .z-table th {
+                            background-color: #1e3a8a !important;
+                            color: #ffffff !important;
+                            font-size: 9.5pt !important;
+                            font-weight: 800 !important;
+                            text-transform: uppercase;
+                            letter-spacing: 0.3px;
+                            padding: 6px 4px !important;
+                            border: 1px solid #1e3a8a !important;
+                            vertical-align: middle;
+                        }
+                        .z-table td {
+                            padding: 5px 4px !important;
+                            font-size: 9pt !important;
+                            color: #000000 !important;
+                            border: 1px solid #64748b !important;
+                            vertical-align: middle;
+                            word-wrap: break-word;
+                        }
+                        .z-table tr:nth-child(even) td {
+                            background-color: #f8fafc;
+                        }
+                        .z-table-refund th {
+                            background-color: #991b1b !important;
+                            border: 1px solid #991b1b !important;
+                        }
+                        .z-badge {
+                            display: inline-block;
+                            padding: 2px 6px;
+                            border-radius: 4px;
+                            font-weight: 800;
+                            font-size: 8.5pt;
+                            text-align: center;
+                            line-height: 1.2;
+                            white-space: nowrap;
+                        }
+                        .z-badge-especes {
+                            background-color: #dcfce7 !important;
+                            color: #14532d !important;
+                            border: 1.5px solid #86efac !important;
+                        }
+                        .z-badge-virement {
+                            background-color: #dbeafe !important;
+                            color: #1e3a8a !important;
+                            border: 1.5px solid #93c5fd !important;
+                        }
+                        .z-badge-cheque {
+                            background-color: #f3e8ff !important;
+                            color: #581c87 !important;
+                            border: 1.5px solid #d8b4fe !important;
+                        }
+                        .z-badge-effet {
+                            background-color: #fef3c7 !important;
+                            color: #78350f !important;
+                            border: 1.5px solid #fcd34d !important;
+                        }
+                        .z-badge-autre {
+                            background-color: #f1f5f9 !important;
+                            color: #0f172a !important;
+                            border: 1.5px solid #cbd5e1 !important;
+                        }
+                        .z-badge-paid {
+                            background-color: #def7ec !important;
+                            color: #03543f !important;
+                            border: 1.5px solid #31c48d !important;
+                        }
+                        .z-badge-partial {
+                            background-color: #fef3c7 !important;
+                            color: #92400e !important;
+                            border: 1.5px solid #f59e0b !important;
+                        }
+                        .z-badge-unpaid {
+                            background-color: #fee2e2 !important;
+                            color: #991b1b !important;
+                            border: 1.5px solid #f87171 !important;
+                        }
+                    </style>
+
+                    <div class="page z-page">
+                        
+                        <!-- EN-TÊTE / HEADER -->
+                        <table style="width: 100%; border-collapse: collapse; border-bottom: 2.5px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 14px;">
+                            <tr>
+                                <!-- Coordonnées Entreprise -->
+                                <td style="width: 56%; vertical-align: top; border: none; padding: 0 10px 10px 0;">
+                                    <img t-if="o.company_id.logo" t-att-src="image_data_uri(o.company_id.logo)" style="max-height: 60px; max-width: 200px; object-fit: contain; margin-bottom: 6px;"/>
+                                    <div style="font-size: 15pt; font-weight: 900; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <t t-esc="o.company_id.name"/>
+                                    </div>
+                                    <div style="color: #1e293b; font-size: 10pt; font-weight: 500; line-height: 1.4; margin-top: 3px;">
+                                        <span t-if="o.company_id.street"><t t-esc="o.company_id.street"/>, </span>
+                                        <span t-if="o.company_id.city"><t t-esc="o.company_id.city"/></span>
+                                        <span t-if="o.company_id.phone"> &amp;nbsp;|&amp;nbsp; Tél : <t t-esc="o.company_id.phone"/></span>
+                                    </div>
+                                    <div style="color: #334155; font-size: 9.5pt; font-weight: 600; margin-top: 3px;">
+                                        <span t-if="o.company_id.ice"><strong>ICE:</strong> <t t-esc="o.company_id.ice"/> &amp;nbsp;|&amp;nbsp; </span>
+                                        <span t-if="o.company_id.company_if"><strong>IF:</strong> <t t-esc="o.company_id.company_if"/> &amp;nbsp;|&amp;nbsp; </span>
+                                        <span t-if="o.company_id.rc"><strong>RC:</strong> <t t-esc="o.company_id.rc"/></span>
+                                    </div>
+                                </td>
+
+                                <!-- Titre & Métadonnées du Rapport -->
+                                <td style="width: 44%; vertical-align: top; text-align: right; border: none; padding: 0 0 10px 10px;">
+                                    <div style="display: inline-block; background-color: #1e3a8a; color: #ffffff; padding: 6px 18px; border-radius: 5px; text-align: center; margin-bottom: 6px;">
+                                        <div style="font-size: 18pt; font-weight: 900; letter-spacing: 1px; color: #ffffff;">
+                                            <t t-if="o.report_type == 'z'">RAPPORT Z</t>
+                                            <t t-else="">RAPPORT X (APERÇU)</t>
+                                        </div>
+                                        <div style="font-size: 9.5pt; font-weight: 700; letter-spacing: 0.6px; color: #e0e7ff;">
+                                            <t t-if="o.report_type == 'z'">CLÔTURE JOURNALIÈRE DES VENTES</t>
+                                            <t t-else="">ÉTAT PROVISOIRE DES VENTES</t>
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 13pt; font-weight: 900; color: #000000; margin-bottom: 4px;">
+                                        <t t-esc="o.name"/>
+                                    </div>
+                                    <div style="font-size: 10pt; color: #1e293b; font-weight: 600; line-height: 1.45;">
+                                        <div><strong>Date d'édition :</strong> <span t-esc="o.date_generation" t-options='{"widget": "datetime", "format": "dd/MM/yyyy HH:mm"}'/></div>
+                                        <div><strong>Période :</strong> Du <span t-field="o.date_start" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/> au <span t-field="o.date_end" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/></div>
+                                        <div><strong>Édité par :</strong> <span t-field="o.user_id.name"/></div>
+                                        <div t-if="o.journal_id"><strong>Journal :</strong> <span t-field="o.journal_id.name"/></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- BLOCS SYNTHÈSE DES VENTES & MODES DE PAIEMENT (Table côte à côte stable wkhtmltopdf) -->
+                        <table style="width: 100%; border-collapse: separate; border-spacing: 10px 0; margin-bottom: 14px;">
+                            <tr>
+                                <!-- Colonne Gauche : Synthèse Financière -->
+                                <td style="width: 50%; vertical-align: top; border: none; padding: 0;">
+                                    <div style="background-color: #1e3a8a; color: #ffffff; padding: 6px 10px; font-weight: 800; font-size: 11pt; border-radius: 4px 4px 0 0; text-transform: uppercase; letter-spacing: 0.4px;">
+                                        RÉSUMÉ DES VENTES
+                                    </div>
+                                    <table class="z-table" style="margin-bottom: 0;">
+                                        <tbody>
+                                            <tr>
+                                                <td style="width: 60%; font-weight: 600; color: #334155;">Nombre de factures émises</td>
+                                                <td style="width: 40%; text-align: right; font-weight: 800; font-size: 11.5pt;"><t t-esc="data['summary']['invoice_count']"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td style="font-weight: 600; color: #334155;">Nombre d'avoirs émis</td>
+                                                <td style="text-align: right; font-weight: 800; font-size: 11.5pt;"><t t-esc="data['summary']['refund_count']"/></td>
+                                            </tr>
+                                            <tr style="background-color: #eff6ff; border-top: 2px solid #93c5fd; border-bottom: 2px solid #93c5fd;">
+                                                <td style="font-weight: 900; color: #1e3a8a; font-size: 11.5pt;">TOTAL VENTES (TTC)</td>
+                                                <td style="text-align: right; font-weight: 900; color: #1e3a8a; font-size: 13pt; white-space: nowrap;">
+                                                    <t t-esc="data['summary']['total_total']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                </td>
+                                            </tr>
+                                            <tr style="background-color: #f0fdf4;">
+                                                <td style="font-weight: 800; color: #15803d; font-size: 11pt;">Total Encaissé / Payé</td>
+                                                <td style="text-align: right; font-weight: 900; color: #15803d; font-size: 12.5pt; white-space: nowrap;">
+                                                    <t t-esc="data['summary']['total_paid']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                </td>
+                                            </tr>
+                                            <tr t-attf-style="background-color: #{data['summary']['total_residual'] > 0 and '#fef2f2' or '#f8fafc'};">
+                                                <td style="font-weight: 800; color: #000000; font-size: 11pt;">Reste à recouvrer / Impayé</td>
+                                                <td t-attf-style="text-align: right; font-weight: 900; font-size: 12pt; white-space: nowrap; color: #{data['summary']['total_residual'] > 0 and '#b91c1c' or '#15803d'};">
+                                                    <t t-esc="data['summary']['total_residual']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+
+                                <!-- Colonne Droite : Ventilation Règlements -->
+                                <td style="width: 50%; vertical-align: top; border: none; padding: 0;">
+                                    <!-- Ventilation Modes de Paiement -->
+                                    <div style="background-color: #1e3a8a; color: #ffffff; padding: 6px 10px; font-weight: 800; font-size: 11pt; border-radius: 4px 4px 0 0; text-transform: uppercase; letter-spacing: 0.4px;">
+                                        VENTILATION DES RÈGLEMENTS
+                                    </div>
+                                    <table class="z-table" style="margin-bottom: 0;">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 44%; text-align: left; background-color: #334155 !important; border: 1px solid #64748b !important; font-size: 9.5pt; padding: 7px 8px !important; white-space: nowrap;">Mode de règlement</th>
+                                                <th style="width: 18%; text-align: center; background-color: #334155 !important; border: 1px solid #64748b !important; font-size: 9.5pt; padding: 7px 6px !important; white-space: nowrap;">Nb</th>
+                                                <th style="width: 38%; text-align: right; background-color: #334155 !important; border: 1px solid #64748b !important; font-size: 9.5pt; padding: 7px 8px !important; white-space: nowrap;">Total encaissé</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-if="data['payments']">
+                                                <t t-foreach="data['payments']" t-as="p">
+                                                    <tr t-if="abs(p['amount']) > 0.005">
+                                                        <td style="vertical-align: middle;">
+                                                            <t t-if="p['mode'] == 'Espèces'">
+                                                                <span class="z-badge z-badge-especes">ESPÈCES</span>
+                                                            </t>
+                                                            <t t-elif="p['mode'] == 'Virement'">
+                                                                <span class="z-badge z-badge-virement">VIREMENT</span>
+                                                            </t>
+                                                            <t t-elif="p['mode'] == 'Chèque'">
+                                                                <span class="z-badge z-badge-cheque">CHÈQUE</span>
+                                                            </t>
+                                                            <t t-elif="p['mode'] == 'Effet'">
+                                                                <span class="z-badge z-badge-effet">EFFET</span>
+                                                            </t>
+                                                            <t t-else="">
+                                                                <span class="z-badge z-badge-autre"><t t-esc="p['mode']"/></span>
+                                                            </t>
+                                                            <!-- Sous-détails si Chèque ou Effet pour visualiser les numéros et émetteurs -->
+                                                            <t t-if="p['mode'] in ('Chèque', 'Effet') and p.get('details')">
+                                                                <div style="margin-top: 3px; font-size: 8pt; color: #475569; line-height: 1.25;">
+                                                                    <t t-foreach="p['details']" t-as="d">
+                                                                        <div>
+                                                                            <span style="font-weight: 700; color: #1e293b;"><t t-esc="d['client']"/></span>
+                                                                            <span t-if="d.get('number')"> (N° <t t-esc="d['number']"/>)</span>
+                                                                            : <span style="font-weight: 600;"><t t-esc="'%.2f' % d['amount']"/> DH</span>
+                                                                        </div>
+                                                                    </t>
+                                                                </div>
+                                                            </t>
+                                                        </td>
+                                                        <td style="text-align: center; vertical-align: middle; font-weight: 700; color: #334155; font-size: 10.5pt;">
+                                                            <t t-esc="p['count']"/>
+                                                        </td>
+                                                        <td style="text-align: right; vertical-align: middle; font-weight: 900; font-size: 11pt; color: #1e3a8a; white-space: nowrap;">
+                                                            <t t-esc="p['amount']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </t>
+                                            <tr t-if="not data['payments'] or sum([p['amount'] for p in data['payments']]) == 0">
+                                                <td colspan="3" style="text-align: center; color: #64748b; font-style: italic; font-weight: 600; padding: 8px;">
+                                                    Aucun encaissement enregistré sur la période
+                                                </td>
+                                            </tr>
+                                            <!-- Total Règlements -->
+                                            <tr style="background-color: #f1f5f9; border-top: 2px solid #64748b;">
+                                                <td style="font-weight: 900; color: #000000; font-size: 10.5pt; text-transform: uppercase; white-space: nowrap;">TOTAL ENCAISSÉ</td>
+                                                <td style="text-align: center; font-weight: 900; color: #1e3a8a; font-size: 11pt; white-space: nowrap;">
+                                                    <t t-esc="sum([p['count'] for p in data['payments']])"/>
+                                                </td>
+                                                <td style="text-align: right; font-weight: 900; color: #15803d; font-size: 12pt; white-space: nowrap;">
+                                                    <t t-esc="data['summary']['total_paid']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+
+
+                        <!-- TABLEAU DÉTAIL DES FACTURES CLIENTS -->
+                        <div style="margin-bottom: 16px;" t-if="data['invoices']">
+                            <div style="background-color: #1e3a8a; color: #ffffff; padding: 7px 10px; font-weight: 900; font-size: 11.5pt; border-radius: 4px 4px 0 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                                DÉTAIL DES FACTURES CLIENTS (<t t-esc="len(data['invoices'])"/>)
+                            </div>
+                            <table class="z-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 11%; text-align: center; white-space: nowrap;">Date</th>
+                                        <th style="width: 19%; white-space: nowrap;">N° Facture</th>
+                                        <th style="width: 20%;">Client</th>
+                                        <th style="width: 13%; text-align: center;">Règlement</th>
+                                        <th style="width: 13%; text-align: right; white-space: nowrap;">Total TTC</th>
+                                        <th style="width: 13%; text-align: right; white-space: nowrap;">Payé</th>
+                                        <th style="width: 11%; text-align: center; white-space: nowrap;">Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="data['invoices']" t-as="inv">
+                                        <tr>
+                                            <!-- Date -->
+                                            <td style="text-align: center; color: #334155; font-weight: 600; font-size: 8pt; white-space: nowrap; padding: 4px 2px !important;">
+                                                <span t-esc="inv['date']" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/>
+                                            </td>
+
+                                            <!-- N° Facture -->
+                                            <td style="font-weight: 800; color: #1e3a8a; font-size: 8pt; white-space: nowrap; padding: 4px 3px !important;">
+                                                <t t-esc="inv['name']"/>
+                                            </td>
+
+                                            <!-- Client -->
+                                            <td style="color: #000000; font-weight: 700; font-size: 8.5pt; word-break: break-word; padding: 4px 4px !important;">
+                                                <t t-esc="inv['partner']"/>
+                                                <t t-if="inv.get('check_client_name') and inv['check_client_name'] != inv['partner']">
+                                                    <div style="font-size: 7.5pt; color: #475569; font-style: italic; font-weight: 600;">
+                                                        (Titulaire : <t t-esc="inv['check_client_name']"/>)
+                                                    </div>
+                                                </t>
+                                            </td>
+
+                                            <!-- Mode de Règlement & Nom Client à côté si Banque, Chèque ou Effet -->
+                                            <td style="text-align: center; padding: 3px 2px !important;">
+                                                <t t-if="inv['payment_mode'] == 'Espèces'">
+                                                    <span class="z-badge z-badge-especes">Espèces</span>
+                                                </t>
+                                                <t t-elif="inv['payment_mode'] == 'Virement'">
+                                                    <span class="z-badge z-badge-virement">Virement</span>
+                                                    <div style="font-size: 7.5pt; color: #1e3a8a; font-weight: 800; margin-top: 1px; line-height: 1.1;">
+                                                        <t t-esc="inv.get('check_client_name') or inv['partner']"/>
+                                                    </div>
+                                                </t>
+                                                <t t-elif="inv['payment_mode'] == 'Chèque'">
+                                                    <span class="z-badge z-badge-cheque">Chèque</span>
+                                                    <div style="font-size: 7.5pt; color: #581c87; font-weight: 800; margin-top: 1px; line-height: 1.1;">
+                                                        <t t-esc="inv.get('check_client_name') or inv['partner']"/>
+                                                    </div>
+                                                    <div t-if="inv.get('check_number')" style="font-size: 7.5pt; color: #000000; font-weight: 700;">
+                                                        N° <t t-esc="inv['check_number']"/>
+                                                    </div>
+                                                    <div t-if="inv.get('check_date_due')" style="font-size: 7.5pt; color: #475569; font-weight: 600;">
+                                                        Éch: <t t-esc="inv['check_date_due']"/>
+                                                    </div>
+                                                </t>
+                                                <t t-elif="inv['payment_mode'] == 'Effet'">
+                                                    <span class="z-badge z-badge-effet">Effet</span>
+                                                    <div style="font-size: 7.5pt; color: #78350f; font-weight: 800; margin-top: 1px; line-height: 1.1;">
+                                                        <t t-esc="inv.get('check_client_name') or inv['partner']"/>
+                                                    </div>
+                                                    <div t-if="inv.get('check_number')" style="font-size: 7.5pt; color: #000000; font-weight: 700;">
+                                                        N° <t t-esc="inv['check_number']"/>
+                                                    </div>
+                                                    <div t-if="inv.get('check_date_due')" style="font-size: 7.5pt; color: #475569; font-weight: 600;">
+                                                        Éch: <t t-esc="inv['check_date_due']"/>
+                                                    </div>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="z-badge z-badge-autre"><t t-esc="inv['payment_mode']"/></span>
+                                                    <div t-if="inv.get('check_client_name')" style="font-size: 7.5pt; color: #000000; font-weight: 700; margin-top: 1px;">
+                                                        <t t-esc="inv['check_client_name']"/>
+                                                    </div>
+                                                </t>
+                                            </td>
+
+                                            <!-- Total TTC -->
+                                            <td style="text-align: right; font-weight: 800; color: #1e3a8a; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px !important;">
+                                                <t t-esc="inv['total']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                            </td>
+
+                                            <!-- Payé -->
+                                            <td style="text-align: right; font-weight: 800; color: #15803d; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px !important;">
+                                                <t t-esc="inv['paid']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                            </td>
+
+                                            <!-- Statut & Reste éventuel -->
+                                            <td style="text-align: center; padding: 3px 2px !important;">
+                                                <t t-if="inv['payment_state'] in ('Payé', 'paid', 'in_payment')">
+                                                    <span class="z-badge z-badge-paid">Payé</span>
+                                                </t>
+                                                <t t-elif="inv['payment_state'] in ('Partiellement payé', 'partial')">
+                                                    <span class="z-badge z-badge-partial">Partiel</span>
+                                                    <div t-if="inv['residual'] > 0" style="font-size: 7.5pt; color: #b91c1c; font-weight: 800; margin-top: 1px;">
+                                                        Reste : <t t-esc="inv['residual']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                    </div>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="z-badge z-badge-unpaid">Non payé</span>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <!-- LIGNE DE TOTALISATION DES FACTURES -->
+                                    <tr style="background-color: #f1f5f9; font-weight: 900; border-top: 2.5px solid #1e3a8a;">
+                                        <td colspan="4" style="text-align: right; font-size: 9pt; color: #1e3a8a; text-transform: uppercase; padding: 6px 6px !important; letter-spacing: 0.2px;">
+                                            TOTAL FACTURES (<t t-esc="len(data['invoices'])"/>) :
+                                        </td>
+                                        <td style="text-align: right; font-size: 8.5pt; font-weight: 900; color: #1e3a8a; white-space: nowrap; padding: 6px 3px !important;">
+                                             <t t-esc="data['summary']['invoices_total']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                         </td>
+                                         <td style="text-align: right; font-size: 8.5pt; font-weight: 900; color: #15803d; white-space: nowrap; padding: 6px 3px !important;">
+                                             <t t-esc="data['summary']['invoices_paid']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                         </td>
+                                         <td style="text-align: center; vertical-align: middle; padding: 4px 2px !important;">
+                                             <t t-if="data['summary']['invoices_residual'] > 0.005">
+                                                 <div style="font-size: 7pt; color: #b91c1c; font-weight: 800; text-transform: uppercase; line-height: 1;">Impayé :</div>
+                                                 <div style="font-size: 8pt; color: #b91c1c; font-weight: 900; white-space: nowrap; margin-top: 1px;">
+                                                     <t t-esc="data['summary']['invoices_residual']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                 </div>
+                                             </t>
+                                             <t t-else="">
+                                                 <span style="color: #15803d; font-size: 8pt; font-weight: 900;">Soldé</span>
+                                             </t>
+                                         </td>
+                                     </tr>
+                                </tbody>
+                            </table>
+                         </div>
+
+                        <!-- TABLEAU DÉTAIL DES AVOIRS ÉMIS (Si existants) -->
+                        <div style="margin-bottom: 16px;" t-if="data['refunds']">
+                            <div style="background-color: #991b1b; color: #ffffff; padding: 7px 10px; font-weight: 900; font-size: 11.5pt; border-radius: 4px 4px 0 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                                LISTE DES AVOIRS ÉMIS (<t t-esc="len(data['refunds'])"/>)
+                            </div>
+                            <table class="z-table z-table-refund">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 11%; text-align: center;">Date</th>
+                                        <th style="width: 19%;">N° Avoir</th>
+                                        <th style="width: 20%;">Client</th>
+                                        <th style="width: 13%; text-align: center;">Règlement</th>
+                                        <th style="width: 13%; text-align: right;">Total TTC</th>
+                                        <th style="width: 13%; text-align: right;">Remboursé</th>
+                                        <th style="width: 11%; text-align: center;">Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="data['refunds']" t-as="ref">
+                                        <tr>
+                                            <td style="text-align: center; color: #334155; font-weight: 600; font-size: 8pt; white-space: nowrap; padding: 4px 2px !important;">
+                                                <span t-esc="ref['date']" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/>
+                                            </td>
+                                            <td style="font-weight: 800; color: #991b1b; font-size: 8pt; white-space: nowrap; padding: 4px 3px !important;">
+                                                <t t-esc="ref['name']"/>
+                                            </td>
+                                            <td style="color: #000000; font-weight: 700; font-size: 8.5pt; word-break: break-word; padding: 4px 4px !important;">
+                                                <t t-esc="ref['partner']"/>
+                                            </td>
+                                            <td style="text-align: center; padding: 3px 2px !important;">
+                                                <span class="z-badge z-badge-autre"><t t-esc="ref['payment_mode']"/></span>
+                                                <div t-if="ref.get('check_client_name')" style="font-size: 7.5pt; color: #991b1b; font-weight: 800; margin-top: 1px;">
+                                                    <t t-esc="ref['check_client_name']"/>
+                                                </div>
+                                            </td>
+                                            <td style="text-align: right; font-weight: 800; color: #991b1b; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px !important;">
+                                                <t t-esc="ref['total']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                            </td>
+                                            <td style="text-align: right; font-weight: 800; color: #991b1b; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px !important;">
+                                                <t t-esc="ref['paid']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                            </td>
+                                            <td style="text-align: center; padding: 3px 2px !important;">
+                                                <span class="z-badge z-badge-autre"><t t-esc="ref['payment_state']"/></span>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <!-- LIGNE DE TOTALISATION DES AVOIRS -->
+                                    <tr style="background-color: #fef2f2; border-top: 2.5px solid #991b1b; font-weight: 900;">
+                                        <td colspan="4" style="text-align: right; font-size: 9pt; color: #991b1b; text-transform: uppercase; padding: 6px 6px !important; letter-spacing: 0.2px;">
+                                            TOTAL AVOIRS (<t t-esc="len(data['refunds'])"/>) :
+                                        </td>
+                                        <td style="text-align: right; font-size: 8.5pt; font-weight: 900; color: #991b1b; white-space: nowrap; padding: 6px 3px !important;">
+                                            <t t-esc="data['summary']['refunds_total']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                        </td>
+                                        <td style="text-align: right; font-size: 8.5pt; font-weight: 900; color: #991b1b; white-space: nowrap; padding: 6px 3px !important;">
+                                            <t t-esc="data['summary']['refunds_paid']" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                        </td>
+                                        <td style="text-align: center; font-size: 8pt; color: #64748b; padding: 4px 2px !important;">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+
+                        <!-- PIED DE PAGE / FOOTER -->
+                        <table style="width: 100%; border-collapse: collapse; border-top: 2px solid #1e3a8a; padding-top: 8px; margin-top: 14px; font-size: 9.5pt; color: #334155; font-weight: 600;">
+                            <tr>
+                                <td style="width: 35%; text-align: left; border: none; padding: 4px 0;">
+                                    <strong style="color: #1e3a8a;">Document :</strong> <t t-esc="o.name"/>
+                                </td>
+                                <td style="width: 35%; text-align: center; border: none; padding: 4px 0;">
+                                    Édité le <span t-esc="o.date_generation" t-options='{"widget": "datetime", "format": "dd/MM/yyyy HH:mm:ss"}'/>
+                                </td>
+                                <td style="width: 30%; text-align: right; border: none; padding: 4px 0;">
+                                    <strong style="color: #1e3a8a;">Utilisateur :</strong> <span t-field="o.user_id.name"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

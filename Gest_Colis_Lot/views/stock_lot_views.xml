@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vue Formulaire : stock.lot -->
+        <record id="view_production_lot_form_inherit_gest_colis" model="ir.ui.view">
+            <field name="name">stock.lot.form.inherit.gest.colis</field>
+            <field name="model">stock.lot</field>
+            <field name="inherit_id" ref="stock.view_production_lot_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//group[@name='main_group']" position="inside">
+                    <group string="Détails du lot (Bois)" name="wood_details">
+                        <field name="photo_lot" widget="image" class="oe_avatar" options="{'size': [128, 128]}"/>
+                        <field name="nb_pieces"/>
+                        <field name="longueur"/>
+                        <field name="quantite_uv"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Vue Liste : stock.lot -->
+        <record id="view_production_lot_tree_inherit_gest_colis" model="ir.ui.view">
+            <field name="name">stock.lot.tree.inherit.gest.colis</field>
+            <field name="model">stock.lot</field>
+            <field name="inherit_id" ref="stock.view_production_lot_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='product_id']" position="after">
+                    <field name="nb_pieces" optional="show"/>
+                    <field name="longueur" optional="show"/>
+                    <field name="quantite_uv" optional="show"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

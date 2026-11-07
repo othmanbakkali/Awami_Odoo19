@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Action de Rapport PDF -->
+        <record id="action_report_package_details" model="ir.actions.report">
+            <field name="name">Fiche de Colis</field>
+            <field name="model">stock.package</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">Gest_Colis_Lot.report_package_details_template</field>
+            <field name="report_file">Gest_Colis_Lot.report_package_details_template</field>
+            <field name="print_report_name">'Fiche_Colis_%s' % (object.name)</field>
+            <field name="binding_model_id" ref="stock.model_stock_package"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <!-- Modèle QWeb du Rapport de Colis -->
+        <template id="report_package_details_template">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-call="web.external_layout">
+                        <div class="page" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                            <div class="row mb32">
+                                <div class="col-6">
+                                    <h2 style="color: #337ab7; font-weight: bold; margin-bottom: 20px;">
+                                        Colis : <span t-field="o.name"/>
+                                    </h2>
+                                    <div style="margin-bottom: 8px;"><strong>Désignation :</strong> <span t-field="o.designation"/></div>
+                                    <div style="margin-bottom: 8px;"><strong>Date de création :</strong> <span t-field="o.date_creation" t-options='{"widget": "date"}'/></div>
+                                    <div style="margin-bottom: 8px;">
+                                        <strong>État :</strong> 
+                                        <span class="badge" t-field="o.state"/>
+                                    </div>
+                                    <div style="margin-bottom: 8px;"><strong>Réf Fournisseur :</strong> <span t-field="o.supplier_ref"/></div>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <div t-if="o.photo" style="max-height: 180px; max-width: 100%;">
+                                        <img t-att-src="image_data_uri(o.photo)" style="max-height: 150px; border: 1px solid #ddd; border-radius: 6px; padding: 4px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1);"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mt32">
+                                <div class="col-12">
+                                    <h4 style="border-bottom: 2px solid #337ab7; padding-bottom: 5px; color: #337ab7; font-weight: bold;">
+                                        Contenu &amp; Composition
+                                    </h4>
+                                    <table class="table table-sm o_main_table table-striped" style="margin-top: 15px;">
+                                        <thead style="background-color: #f5f5f5;">
+                                            <tr>
+                                                <th style="padding: 8px;">Produit</th>
+                                                <th style="padding: 8px;">Dimensions / Métrage</th>
+                                                <th class="text-end" style="padding: 8px;">Quantité Initiale</th>
+                                                <th class="text-end" style="padding: 8px;">Quantité Restante</th>
+                                                <th style="padding: 8px;">Unité</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="o.colis_line_ids" t-as="line">
+                                                <td style="padding: 8px;"><span t-field="line.product_id.display_name"/></td>
+                                                <td style="padding: 8px;"><span t-field="line.dimensions"/></td>
+                                                <td class="text-end" style="padding: 8px;"><span t-field="line.qty_package"/></td>
+                                                <td class="text-end" style="padding: 8px;"><span t-field="line.qty_available"/></td>
+                                                <td style="padding: 8px;"><span t-field="line.product_uom_id.name"/></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div t-if="o.observations" class="row mt32" style="background-color: #fafafa; border-left: 4px solid #337ab7; padding: 10px 15px; margin-top: 30px; border-radius: 4px;">
+                                <div class="col-12">
+                                    <strong style="color: #337ab7;">Observations :</strong>
+                                    <p t-field="o.observations" style="margin-top: 5px; margin-bottom: 0; font-style: italic;"/>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

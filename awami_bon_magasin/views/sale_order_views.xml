@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extension de la vue formulaire Sale Order -->
+    <record id="view_order_form_inherit_awami" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.awami</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Ajout du mode de règlement dans l'en-tête de vente -->
+            <xpath expr="//field[@name='payment_term_id']" position="after">
+                <field name="payment_mode" widget="selection"/>
+                <field name="has_m3_lines" invisible="1"/>
+            </xpath>
+
+            <!-- Bloc Montant Total Souhaité et Bouton sous le total de la commande -->
+            <xpath expr="//field[@name='tax_totals']" position="after">
+                <label for="manual_amount_total" string="Total Souhaité"/>
+                <div class="d-flex align-items-center justify-content-end gap-1">
+                    <field name="manual_amount_total" nolabel="1" class="text-end fw-bold" readonly="state not in ('draft', 'sent')" placeholder="0.00"/>
+                    <button name="action_apply_manual_amount_total" type="object" string="Ajuster" icon="fa-calculator" class="btn btn-sm btn-primary text-nowrap" invisible="state not in ('draft', 'sent')"/>
+                </div>
+            </xpath>
+
+            <!-- Déblocage explicite du domaine sur le champ product_uom_id -->
+            <xpath expr="//field[@name='order_line']/list//field[@name='product_uom_id']" position="attributes">
+                <attribute name="domain">[]</attribute>
+            </xpath>
+            <xpath expr="//field[@name='order_line']/form//field[@name='product_uom_id']" position="attributes">
+                <attribute name="domain">[]</attribute>
+            </xpath>
+
+            <!-- Garantie que le prix unitaire est modifiable directement et sauvegardé -->
+            <xpath expr="//field[@name='order_line']/list//field[@name='price_unit']" position="attributes">
+                <attribute name="force_save">1</attribute>
+            </xpath>
+
+            <!-- Colonne Prix Unitaire de Base dans la liste des lignes de commande -->
+            <xpath expr="//field[@name='order_line']/list//field[@name='price_unit']" position="before">
+                <field name="base_price_unit" string="P.U Base" optional="show"/>
+            </xpath>
+
+            <!-- Champ Prix Unitaire de Base dans le formulaire popup de ligne -->
+            <xpath expr="//field[@name='order_line']/form//field[@name='price_unit']" position="before">
+                <field name="base_price_unit" string="P.U Base"/>
+            </xpath>
+
+            <!-- Ajout des colonnes de dimensions pour le bois en m3 dans la liste des lignes de commande -->
+            <xpath expr="//field[@name='order_line']/list//field[@name='product_uom_qty']" position="before">
+                <field name="is_adjustment_line" column_invisible="1"/>
+                <field name="is_m3" column_invisible="1"/>
+                <field name="custom_price_unit" column_invisible="1"/>
+                <field name="wood_length" string="Long. (m)" optional="show"/>
+                <field name="wood_width" string="Larg. (m)" optional="show"/>
+                <field name="wood_thickness" string="Épais. (m)" optional="show"/>
+            </xpath>
+
+            <!-- Ajout dans le formulaire de ligne (popup) -->
+            <xpath expr="//field[@name='order_line']/form//field[@name='product_uom_qty']" position="before">
+                <field name="is_m3" invisible="1"/>
+                <field name="custom_price_unit" invisible="1"/>
+                <field name="wood_length" invisible="not is_m3"/>
+                <field name="wood_width" invisible="not is_m3"/>
+                <field name="wood_thickness" invisible="not is_m3"/>
+                <field name="volume_m3" invisible="not is_m3" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Renommage du menu Devis en "Bons Magasin" -->
+    <record id="sale.menu_sale_quotations" model="ir.ui.menu">
+        <field name="name">Bons Magasin</field>
+    </record>
+
+    <!-- Renommage de l'action de fenêtre Devis -->
+    <record id="sale.action_quotations_with_onboarding" model="ir.actions.act_window">
+        <field name="name">Bons Magasin</field>
+    </record>
+</odoo>

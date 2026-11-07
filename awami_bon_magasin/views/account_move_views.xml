@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extension de la vue formulaire Facture Client (account.move) -->
+    <record id="view_move_form_inherit_awami" model="ir.ui.view">
+        <field name="name">account.move.form.inherit.awami</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='invoice_payment_term_id']" position="after">
+                <field name="payment_mode" invisible="move_type not in ('out_invoice', 'out_refund')" widget="selection"/>
+            </xpath>
+
+            <!-- Bloc Montant Total Souhaité et Bouton sous le total de la facture -->
+            <xpath expr="//field[@name='tax_totals']" position="after">
+                <label for="manual_amount_total" string="Total Souhaité" invisible="move_type not in ('out_invoice', 'out_refund')"/>
+                <div class="d-flex align-items-center justify-content-end gap-1" invisible="move_type not in ('out_invoice', 'out_refund')">
+                    <field name="manual_amount_total" nolabel="1" class="text-end fw-bold" readonly="state != 'draft'" placeholder="0.00"/>
+                    <button name="action_apply_manual_amount_total" type="object" string="Ajuster" icon="fa-calculator" class="btn btn-sm btn-primary text-nowrap" invisible="state != 'draft'"/>
+                </div>
+            </xpath>
+
+            <!-- Déblocage du domaine pour le champ product_uom_id dans les lignes de facture -->
+            <xpath expr="//field[@name='invoice_line_ids']/list//field[@name='product_uom_id']" position="attributes">
+                <attribute name="domain">[]</attribute>
+            </xpath>
+            <xpath expr="//field[@name='invoice_line_ids']/form//field[@name='product_uom_id']" position="attributes">
+                <attribute name="domain">[]</attribute>
+            </xpath>
+
+            <!-- Garantie que le prix unitaire est modifiable directement et sauvegardé -->
+            <xpath expr="//field[@name='invoice_line_ids']/list//field[@name='price_unit']" position="attributes">
+                <attribute name="force_save">1</attribute>
+                <attribute name="readonly">parent.state != 'draft'</attribute>
+            </xpath>
+
+            <!-- Colonne Prix Unitaire de Base dans la liste des lignes de facture -->
+            <xpath expr="//field[@name='invoice_line_ids']/list//field[@name='price_unit']" position="before">
+                <field name="base_price_unit" string="P.U Base" optional="show"/>
+            </xpath>
+
+            <!-- Champ Prix Unitaire de Base dans le formulaire popup de ligne de facture -->
+            <xpath expr="//field[@name='invoice_line_ids']/form//field[@name='price_unit']" position="before">
+                <field name="base_price_unit" string="P.U Base"/>
+            </xpath>
+
+            <!-- Ajout des colonnes de dimensions pour le bois en m3 dans la liste des lignes de facture -->
+            <xpath expr="//field[@name='invoice_line_ids']/list//field[@name='quantity']" position="before">
+                <field name="is_adjustment_line" column_invisible="1"/>
+                <field name="is_m3" column_invisible="1"/>
+                <field name="custom_price_unit" column_invisible="1"/>
+                <field name="wood_length" string="Long. (m)" optional="show"/>
+                <field name="wood_width" string="Larg. (m)" optional="show"/>
+                <field name="wood_thickness" string="Épais. (m)" optional="show"/>
+            </xpath>
+
+            <xpath expr="//field[@name='invoice_line_ids']/form//field[@name='quantity']" position="before">
+                <field name="is_m3" invisible="1"/>
+                <field name="custom_price_unit" invisible="1"/>
+                <field name="wood_length" invisible="not is_m3"/>
+                <field name="wood_width" invisible="not is_m3"/>
+                <field name="wood_thickness" invisible="not is_m3"/>
+                <field name="volume_m3" invisible="not is_m3" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

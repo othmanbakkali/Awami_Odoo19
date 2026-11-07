@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View (History) -->
+    <record id="view_account_z_report_tree" model="ir.ui.view">
+        <field name="name">account.z.report.tree</field>
+        <field name="model">account.z.report</field>
+        <field name="arch" type="xml">
+            <list string="Historique Rapports Z/X" create="false" edit="false">
+                <field name="name"/>
+                <field name="report_type" decoration-info="report_type == 'x'" decoration-success="report_type == 'z'" widget="badge"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="date_generation"/>
+                <field name="user_id"/>
+                <field name="invoice_count" sum="Total Factures"/>
+                <field name="refund_count" sum="Total Avoirs"/>
+                <field name="total_untaxed" widget="monetary" sum="Total HT"/>
+                <field name="total_total" widget="monetary" sum="Total TTC"/>
+                <field name="total_paid" widget="monetary" sum="Total Payé"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View (Details & Downloads) -->
+    <record id="view_account_z_report_form" model="ir.ui.view">
+        <field name="name">account.z.report.form</field>
+        <field name="model">account.z.report</field>
+        <field name="arch" type="xml">
+            <form string="Détail du Rapport" create="false" edit="false">
+                <header>
+                    <button name="action_print_pdf" string="Télécharger PDF" type="object" class="btn-primary" icon="fa-file-pdf-o"/>
+                    <button name="action_export_excel" string="Exporter Excel" type="object" class="btn-secondary" icon="fa-file-excel-o"/>
+                    <button name="action_export_csv" string="Exporter CSV" type="object" class="btn-secondary" icon="fa-file-code-o"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                        <h3>
+                            <field name="report_type" widget="radio" options="{'horizontal': true}" readonly="1"/>
+                        </h3>
+                    </div>
+                    <group>
+                        <group string="Critères de filtrage">
+                            <field name="date_start" readonly="1"/>
+                            <field name="date_end" readonly="1"/>
+                            <field name="journal_id" readonly="1" invisible="not journal_id"/>
+                            <field name="salesperson_id" readonly="1" invisible="not salesperson_id"/>
+                            <field name="invoice_state" readonly="1"/>
+                            <field name="company_id" readonly="1" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Informations de génération">
+                            <field name="date_generation" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Synthèse Financière" class="oe_subtotal_footer oe_right">
+                        <field name="invoice_count" readonly="1"/>
+                        <field name="refund_count" readonly="1"/>
+                        <field name="total_untaxed" widget="monetary" readonly="1"/>
+                        <field name="total_tax" widget="monetary" readonly="1"/>
+                        <div class="oe_subtotal_footer_separator oe_inline">
+                            <label for="total_total"/>
+                        </div>
+                        <field name="total_total" widget="monetary" nolabel="1" class="oe_subtotal_footer_separator" readonly="1"/>
+                        <field name="total_paid" widget="monetary" readonly="1"/>
+                        <field name="total_residual" widget="monetary" readonly="1"/>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Factures Incluses" name="invoices">
+                            <field name="invoice_ids" readonly="1">
+                                <list string="Factures" create="false" delete="false" edit="false">
+                                    <field name="date"/>
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="invoice_user_id"/>
+                                    <field name="amount_untaxed_signed" string="HT" sum="Total HT"/>
+                                    <field name="amount_tax_signed" string="TVA" sum="Total TVA"/>
+                                    <field name="amount_total_signed" string="TTC" sum="Total TTC"/>
+                                    <field name="amount_residual_signed" string="Reste à payer" sum="Total Reste"/>
+                                    <field name="payment_state" widget="badge" decoration-danger="payment_state == 'not_paid'" decoration-warning="payment_state in ('partial', 'in_payment')" decoration-success="payment_state == 'paid'"/>
+                                    <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'posted'"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Fichiers de clôture" name="attachments">
+                            <group>
+                                <field name="pdf_attachment_id"/>
+                                <field name="excel_filename" invisible="1"/>
+                                <field name="excel_file" filename="excel_filename" widget="binary" readonly="1"/>
+                                <field name="csv_filename" invisible="1"/>
+                                <field name="csv_file" filename="csv_filename" widget="binary" readonly="1"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_account_z_report_search" model="ir.ui.view">
+        <field name="name">account.z.report.search</field>
+        <field name="model">account.z.report</field>
+        <field name="arch" type="xml">
+            <search string="Recherche Rapport Z">
+                <field name="name"/>
+                <field name="user_id"/>
+                <filter string="Rapports Z (Clôtures)" name="clotures" domain="[('report_type', '=', 'z')]"/>
+                <filter string="Rapports X (Aperçus)" name="apercus" domain="[('report_type', '=', 'x')]"/>
+                <separator/>
+                <group>
+                    <filter string="Utilisateur" name="group_user" domain="[]" context="{'group_by': 'user_id'}"/>
+                    <filter string="Type de Rapport" name="group_type" domain="[]" context="{'group_by': 'report_type'}"/>
+                    <filter string="Société" name="group_company" domain="[]" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action for History -->
+    <record id="action_account_z_report" model="ir.actions.act_window">
+        <field name="name">Historique Rapports Z / X</field>
+        <field name="res_model">account.z.report</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_account_z_report_search"/>
+    </record>
+
+    <!-- Reporting Menu Items -->
+    <!-- parent menu in invoicing is: account.menu_finance_reports -->
+    <menuitem id="menu_account_z_report_wizard_action"
+              name="Rapport Z Journalier"
+              parent="account.menu_finance_reports"
+              action="action_account_z_report_wizard"
+              sequence="50"/>
+
+    <menuitem id="menu_account_z_report_history_action"
+              name="Historique Rapports Z / X"
+              parent="account.menu_finance_reports"
+              action="action_account_z_report"
+              sequence="51"/>
+
+    <!-- Inject Button in Customer Invoices List View -->
+    <record id="view_out_invoice_tree_inherit_z_report" model="ir.ui.view">
+        <field name="name">account.out.invoice.tree.inherit.z.report</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_out_invoice_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="%(action_account_z_report_wizard)d" string="Générer Rapport Z" type="action" class="btn-primary" groups="account.group_account_invoice"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

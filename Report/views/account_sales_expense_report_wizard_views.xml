@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue Formulaire du Wizard -->
+    <record id="view_account_sales_expense_report_wizard_form" model="ir.ui.view">
+        <field name="name">account.sales.expense.report.wizard.form</field>
+        <field name="model">account.sales.expense.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Générer un Rapport Ventes &amp; Dépenses">
+                <sheet>
+                    <div class="oe_title">
+                        <h2>Génération du Rapport Journalier Ventes &amp; Dépenses</h2>
+                        <p class="text-muted">
+                            Consolidez en un seul document le chiffre d'affaires, les factures clients, les dépenses, les charges fournisseurs et le flux de trésorerie net.
+                        </p>
+                    </div>
+
+                    <group>
+                        <group string="Type &amp; Période">
+                            <field name="report_type" widget="radio"/>
+                            <field name="date_start"/>
+                            <field name="date_end"/>
+                        </group>
+                        <group string="Périmètre &amp; Filtrage">
+                            <field name="company_id" options="{'no_create': True}"/>
+                            <field name="sale_journal_id" options="{'no_create': True}"/>
+                            <field name="purchase_journal_id" options="{'no_create': True}"/>
+                            <field name="salesperson_id" options="{'no_create': True}"/>
+                            <field name="invoice_state"/>
+                        </group>
+                    </group>
+                </sheet>
+
+                <footer>
+                    <button name="action_generate_report" string="Consulter et Ouvrir" type="object" class="btn-primary" icon="fa-eye"/>
+                    <button name="action_print_pdf" string="Imprimer PDF Direct" type="object" class="btn-success" icon="fa-file-pdf-o"/>
+                    <button name="action_export_excel" string="Exporter Excel (.xlsx)" type="object" class="btn-secondary" icon="fa-file-excel-o"/>
+                    <button string="Annuler" class="btn-link" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action pour ouvrir le Wizard -->
+    <record id="action_account_sales_expense_report_wizard" model="ir.actions.act_window">
+        <field name="name">Rapport Journalier Ventes &amp; Dépenses</field>
+        <field name="res_model">account.sales.expense.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Menus dans la Comptabilité / Facturation -->
+    <menuitem id="menu_sales_expense_report_wizard_action"
+              name="Rapport Ventes &amp; Dépenses"
+              parent="account.menu_finance_reports"
+              action="action_account_sales_expense_report_wizard"
+              sequence="25"/>
+
+    <menuitem id="menu_sales_expense_report_history_action"
+              name="Historique Ventes &amp; Dépenses"
+              parent="account.menu_finance_reports"
+              action="action_account_sales_expense_report_history"
+              sequence="26"/>
+</odoo>
+

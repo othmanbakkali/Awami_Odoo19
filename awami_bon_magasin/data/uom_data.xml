@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Unités de mesure en Mètre Linéaire (ml) de 0.5 ml à 7.0 ml (Odoo 19) -->
+    <!-- Unité de référence : uom.product_uom_milliliter (ml) -->
+    <record id="uom_0_5_ml" model="uom.uom">
+        <field name="name">0.5 ml</field>
+        <field name="relative_factor" eval="0.5"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_0_6_ml" model="uom.uom">
+        <field name="name">0.6 ml</field>
+        <field name="relative_factor" eval="0.6"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_0_7_ml" model="uom.uom">
+        <field name="name">0.7 ml</field>
+        <field name="relative_factor" eval="0.7"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_0_8_ml" model="uom.uom">
+        <field name="name">0.8 ml</field>
+        <field name="relative_factor" eval="0.8"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_0_9_ml" model="uom.uom">
+        <field name="name">0.9 ml</field>
+        <field name="relative_factor" eval="0.9"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_0_ml" model="uom.uom">
+        <field name="name">1.0 ml</field>
+        <field name="relative_factor" eval="1.0"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_1_ml" model="uom.uom">
+        <field name="name">1.1 ml</field>
+        <field name="relative_factor" eval="1.1"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_2_ml" model="uom.uom">
+        <field name="name">1.2 ml</field>
+        <field name="relative_factor" eval="1.2"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_25_ml" model="uom.uom">
+        <field name="name">1.25 ml</field>
+        <field name="relative_factor" eval="1.25"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_3_ml" model="uom.uom">
+        <field name="name">1.3 ml</field>
+        <field name="relative_factor" eval="1.3"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_4_ml" model="uom.uom">
+        <field name="name">1.4 ml</field>
+        <field name="relative_factor" eval="1.4"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_5_ml" model="uom.uom">
+        <field name="name">1.5 ml</field>
+        <field name="relative_factor" eval="1.5"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_6_ml" model="uom.uom">
+        <field name="name">1.6 ml</field>
+        <field name="relative_factor" eval="1.6"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_7_ml" model="uom.uom">
+        <field name="name">1.7 ml</field>
+        <field name="relative_factor" eval="1.7"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_75_ml" model="uom.uom">
+        <field name="name">1.75 ml</field>
+        <field name="relative_factor" eval="1.75"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_8_ml" model="uom.uom">
+        <field name="name">1.8 ml</field>
+        <field name="relative_factor" eval="1.8"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_1_9_ml" model="uom.uom">
+        <field name="name">1.9 ml</field>
+        <field name="relative_factor" eval="1.9"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_0_ml" model="uom.uom">
+        <field name="name">2.0 ml</field>
+        <field name="relative_factor" eval="2.0"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_1_ml" model="uom.uom">
+        <field name="name">2.1 ml</field>
+        <field name="relative_factor" eval="2.1"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_2_ml" model="uom.uom">
+        <field name="name">2.2 ml</field>
+        <field name="relative_factor" eval="2.2"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_25_ml" model="uom.uom">
+        <field name="name">2.25 ml</field>
+        <field name="relative_factor" eval="2.25"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_3_ml" model="uom.uom">
+        <field name="name">2.3 ml</field>
+        <field name="relative_factor" eval="2.3"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_4_ml" model="uom.uom">
+        <field name="name">2.4 ml</field>
+        <field name="relative_factor" eval="2.4"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_5_ml" model="uom.uom">
+        <field name="name">2.5 ml</field>
+        <field name="relative_factor" eval="2.5"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_6_ml" model="uom.uom">
+        <field name="name">2.6 ml</field>
+        <field name="relative_factor" eval="2.6"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_7_ml" model="uom.uom">
+        <field name="name">2.7 ml</field>
+        <field name="relative_factor" eval="2.7"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_75_ml" model="uom.uom">
+        <field name="name">2.75 ml</field>
+        <field name="relative_factor" eval="2.75"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_8_ml" model="uom.uom">
+        <field name="name">2.8 ml</field>
+        <field name="relative_factor" eval="2.8"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_2_9_ml" model="uom.uom">
+        <field name="name">2.9 ml</field>
+        <field name="relative_factor" eval="2.9"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_ml" model="uom.uom">
+        <field name="name">3.0 ml</field>
+        <field name="relative_factor" eval="3.0"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_1_ml" model="uom.uom">
+        <field name="name">3.1 ml</field>
+        <field name="relative_factor" eval="3.1"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_2_ml" model="uom.uom">
+        <field name="name">3.2 ml</field>
+        <field name="relative_factor" eval="3.2"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_25_ml" model="uom.uom">
+        <field name="name">3.25 ml</field>
+        <field name="relative_factor" eval="3.25"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_3_ml" model="uom.uom">
+        <field name="name">3.3 ml</field>
+        <field name="relative_factor" eval="3.3"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_4_ml" model="uom.uom">
+        <field name="name">3.4 ml</field>
+        <field name="relative_factor" eval="3.4"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_5_ml" model="uom.uom">
+        <field name="name">3.5 ml</field>
+        <field name="relative_factor" eval="3.5"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_6_ml" model="uom.uom">
+        <field name="name">3.6 ml</field>
+        <field name="relative_factor" eval="3.6"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_7_ml" model="uom.uom">
+        <field name="name">3.7 ml</field>
+        <field name="relative_factor" eval="3.7"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_75_ml" model="uom.uom">
+        <field name="name">3.75 ml</field>
+        <field name="relative_factor" eval="3.75"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_8_ml" model="uom.uom">
+        <field name="name">3.8 ml</field>
+        <field name="relative_factor" eval="3.8"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_3_9_ml" model="uom.uom">
+        <field name="name">3.9 ml</field>
+        <field name="relative_factor" eval="3.9"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_ml" model="uom.uom">
+        <field name="name">4.0 ml</field>
+        <field name="relative_factor" eval="4.0"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_1_ml" model="uom.uom">
+        <field name="name">4.1 ml</field>
+        <field name="relative_factor" eval="4.1"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_2_ml" model="uom.uom">
+        <field name="name">4.2 ml</field>
+        <field name="relative_factor" eval="4.2"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_25_ml" model="uom.uom">
+        <field name="name">4.25 ml</field>
+        <field name="relative_factor" eval="4.25"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_3_ml" model="uom.uom">
+        <field name="name">4.3 ml</field>
+        <field name="relative_factor" eval="4.3"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_4_ml" model="uom.uom">
+        <field name="name">4.4 ml</field>
+        <field name="relative_factor" eval="4.4"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_5_ml" model="uom.uom">
+        <field name="name">4.5 ml</field>
+        <field name="relative_factor" eval="4.5"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_6_ml" model="uom.uom">
+        <field name="name">4.6 ml</field>
+        <field name="relative_factor" eval="4.6"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_7_ml" model="uom.uom">
+        <field name="name">4.7 ml</field>
+        <field name="relative_factor" eval="4.7"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_75_ml" model="uom.uom">
+        <field name="name">4.75 ml</field>
+        <field name="relative_factor" eval="4.75"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_8_ml" model="uom.uom">
+        <field name="name">4.8 ml</field>
+        <field name="relative_factor" eval="4.8"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_4_9_ml" model="uom.uom">
+        <field name="name">4.9 ml</field>
+        <field name="relative_factor" eval="4.9"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_ml" model="uom.uom">
+        <field name="name">5.0 ml</field>
+        <field name="relative_factor" eval="5.0"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_1_ml" model="uom.uom">
+        <field name="name">5.1 ml</field>
+        <field name="relative_factor" eval="5.1"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_2_ml" model="uom.uom">
+        <field name="name">5.2 ml</field>
+        <field name="relative_factor" eval="5.2"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_25_ml" model="uom.uom">
+        <field name="name">5.25 ml</field>
+        <field name="relative_factor" eval="5.25"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_3_ml" model="uom.uom">
+        <field name="name">5.3 ml</field>
+        <field name="relative_factor" eval="5.3"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_4_ml" model="uom.uom">
+        <field name="name">5.4 ml</field>
+        <field name="relative_factor" eval="5.4"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_5_ml" model="uom.uom">
+        <field name="name">5.5 ml</field>
+        <field name="relative_factor" eval="5.5"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_6_ml" model="uom.uom">
+        <field name="name">5.6 ml</field>
+        <field name="relative_factor" eval="5.6"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_7_ml" model="uom.uom">
+        <field name="name">5.7 ml</field>
+        <field name="relative_factor" eval="5.7"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_75_ml" model="uom.uom">
+        <field name="name">5.75 ml</field>
+        <field name="relative_factor" eval="5.75"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_8_ml" model="uom.uom">
+        <field name="name">5.8 ml</field>
+        <field name="relative_factor" eval="5.8"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_5_9_ml" model="uom.uom">
+        <field name="name">5.9 ml</field>
+        <field name="relative_factor" eval="5.9"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_0_ml" model="uom.uom">
+        <field name="name">6.0 ml</field>
+        <field name="relative_factor" eval="6.0"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_1_ml" model="uom.uom">
+        <field name="name">6.1 ml</field>
+        <field name="relative_factor" eval="6.1"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_2_ml" model="uom.uom">
+        <field name="name">6.2 ml</field>
+        <field name="relative_factor" eval="6.2"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_25_ml" model="uom.uom">
+        <field name="name">6.25 ml</field>
+        <field name="relative_factor" eval="6.25"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_3_ml" model="uom.uom">
+        <field name="name">6.3 ml</field>
+        <field name="relative_factor" eval="6.3"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_4_ml" model="uom.uom">
+        <field name="name">6.4 ml</field>
+        <field name="relative_factor" eval="6.4"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_5_ml" model="uom.uom">
+        <field name="name">6.5 ml</field>
+        <field name="relative_factor" eval="6.5"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_6_ml" model="uom.uom">
+        <field name="name">6.6 ml</field>
+        <field name="relative_factor" eval="6.6"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_7_ml" model="uom.uom">
+        <field name="name">6.7 ml</field>
+        <field name="relative_factor" eval="6.7"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_75_ml" model="uom.uom">
+        <field name="name">6.75 ml</field>
+        <field name="relative_factor" eval="6.75"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_8_ml" model="uom.uom">
+        <field name="name">6.8 ml</field>
+        <field name="relative_factor" eval="6.8"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_6_9_ml" model="uom.uom">
+        <field name="name">6.9 ml</field>
+        <field name="relative_factor" eval="6.9"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="uom_7_0_ml" model="uom.uom">
+        <field name="name">7.0 ml</field>
+        <field name="relative_factor" eval="7.0"/>
+        <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

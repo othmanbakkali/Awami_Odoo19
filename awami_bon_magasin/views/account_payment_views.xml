@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- FORM VIEW INHERIT (NOUVEAU PAIEMENT & CONSULTATION) -->
+    <record id="view_account_payment_form_inherit_awami" model="ir.ui.view">
+        <field name="name">account.payment.form.inherit.awami</field>
+        <field name="model">account.payment</field>
+        <field name="inherit_id" ref="account.view_account_payment_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_mark_as_paid" string="Marquer comme Payé" type="object" class="oe_highlight" invisible="state != 'in_process'"/>
+                <button name="action_unmark_as_paid" string="Remettre en cours" type="object" invisible="not is_marked_paid or state != 'paid'"/>
+            </xpath>
+            <xpath expr="//field[@name='payment_method_line_id']" position="after">
+                <field name="is_marked_paid" invisible="1"/>
+                <field name="payment_mode" widget="selection" string="Mode de règlement"/>
+                <field name="check_number" 
+                       string="N° de Chèque / Effet" 
+                       placeholder="Ex: CH-0012345 / 7654321"
+                       invisible="payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque', 'virement')" 
+                       required="payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque')"/>
+                <field name="check_client_name" 
+                       string="Auteur / Émetteur du Chèque" 
+                       placeholder="Nom figurant sur le chèque ou l'effet"
+                       invisible="payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque')" 
+                       required="payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque')"/>
+                <field name="check_date_due" 
+                       string="Date d'échéance du Chèque" 
+                       invisible="payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque')"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- REGISTER PAYMENT WIZARD INHERIT (ENREGISTRER UN PAIEMENT DEPUIS FACTURE) -->
+    <record id="view_account_payment_register_form_inherit_awami" model="ir.ui.view">
+        <field name="name">account.payment.register.form.inherit.awami</field>
+        <field name="model">account.payment.register</field>
+        <field name="inherit_id" ref="account.view_account_payment_register_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_method_line_id']" position="after">
+                <field name="payment_mode" widget="selection" string="Mode de règlement"/>
+                <field name="check_number" 
+                       string="N° de Chèque / Effet" 
+                       placeholder="Ex: CH-0012345 / 7654321"
+                       invisible="payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque', 'virement')" 
+                       required="payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque')"/>
+                <field name="check_client_name" 
+                       string="Auteur / Émetteur du Chèque" 
+                       placeholder="Nom figurant sur le chèque ou l'effet"
+                       invisible="payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque')" 
+                       required="payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque')"/>
+                <field name="check_date_due" 
+                       string="Date d'échéance du Chèque" 
+                       invisible="payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque')"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- TREE / LIST VIEW INHERIT -->
+    <record id="view_account_payment_tree_inherit_awami" model="ir.ui.view">
+        <field name="name">account.payment.tree.inherit.awami</field>
+        <field name="model">account.payment</field>
+        <field name="inherit_id" ref="account.view_account_payment_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='journal_id']" position="after">
+                <field name="payment_method_line_id" string="Mode de paiement" optional="show"/>
+                <field name="payment_mode" string="Règlement" optional="show"/>
+                <field name="check_number" string="N° Chèque / Effet" optional="hide"/>
+                <field name="check_client_name" string="Auteur Chèque" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

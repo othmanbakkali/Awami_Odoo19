@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Format papier A4 Portrait avec marges optimisées 8mm -->
+    <record id="paperformat_sales_expense_report" model="report.paperformat">
+        <field name="name">Format A4 Portrait - Rapport Ventes et Dépenses</field>
+        <field name="default" eval="True"/>
+        <field name="format">A4</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">8</field>
+        <field name="margin_bottom">8</field>
+        <field name="margin_left">8</field>
+        <field name="margin_right">8</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">96</field>
+    </record>
+
+    <!-- Action de rapport PDF QWeb -->
+    <record id="action_report_sales_expense_pdf" model="ir.actions.report">
+        <field name="name">Rapport Journalier Ventes &amp; Dépenses</field>
+        <field name="model">account.sales.expense.report</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">Report.report_sales_expense_pdf_template</field>
+        <field name="report_file">Report.report_sales_expense_pdf_template</field>
+        <field name="print_report_name">'Rapport_Ventes_Depenses_%s' % (object.name.replace('/', '_'))</field>
+        <field name="binding_model_id" ref="model_account_sales_expense_report"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="paperformat_sales_expense_report"/>
+    </record>
+</odoo>
+

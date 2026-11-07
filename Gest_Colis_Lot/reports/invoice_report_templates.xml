@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_invoice_document_inherit_colis" inherit_id="account.report_invoice_document">
+        <!-- En-tête de la colonne Colis -->
+        <xpath expr="//table[contains(@class, 'o_main_table')]/thead/tr/th[@name='th_description']" position="after">
+            <th name="th_package" class="text-start">Colis</th>
+        </xpath>
+        <!-- Ligne de la colonne Colis -->
+        <xpath expr="//table[contains(@class, 'o_main_table')]/tbody//tr//t[@name='account_invoice_line_accountable']/td[@name='account_invoice_line_name']" position="after">
+            <td name="td_package">
+                <span t-field="line.package_id.name"/>
+                <div t-if="line.package_id.photo" style="margin-top: 4px;">
+                    <img t-att-src="image_data_uri(line.package_id.photo)" style="max-height: 40px; border-radius: 2px;"/>
+                </div>
+            </td>
+        </xpath>
+    </template>
+</odoo>
