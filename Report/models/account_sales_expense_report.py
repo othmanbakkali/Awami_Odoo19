@@ -13,8 +13,8 @@ class AccountSalesExpenseReport(models.Model):
 
     name = fields.Char(string='Numéro Rapport', required=True, copy=False, default='/')
     report_type = fields.Selection([
-        ('x', 'Rapport X (Aperçu Provisoire)'),
-        ('z', 'Rapport Z (Clôture Journalière)')
+        ('x', 'Rapport des Ventes & Dépenses (Aperçu Provisoire)'),
+        ('z', 'Rapport des Ventes & Dépenses (Clôture Journalière)')
     ], string='Type de Rapport', required=True, default='z')
     date_start = fields.Date(string='Date Début', required=True, default=fields.Date.context_today)
     date_end = fields.Date(string='Date Fin', required=True, default=fields.Date.context_today)
@@ -23,8 +23,9 @@ class AccountSalesExpenseReport(models.Model):
     company_id = fields.Many2one('res.company', string='Société', required=True, default=lambda self: self.env.company)
     currency_id = fields.Many2one('res.currency', string='Devise', related='company_id.currency_id', readonly=True)
     
-    sale_journal_id = fields.Many2one('account.journal', string='Journal de Vente', domain="[('type', '=', 'sale')]")
-    purchase_journal_id = fields.Many2one('account.journal', string='Journal d\'Achat/Charges', domain="[('type', '=', 'purchase')]")
+    sale_journal_id = fields.Many2one('account.journal', string='Journal de Vente', domain="[('type', '=', 'sale'), ('company_id', '=', company_id)]")
+    purchase_journal_id = fields.Many2one('account.journal', string='Journal d\'Achat/Charges', domain="[('type', '=', 'purchase'), ('company_id', '=', company_id)]")
+
     salesperson_id = fields.Many2one('res.users', string='Commercial / Responsable')
     invoice_state = fields.Selection([
         ('posted', 'Factures comptabilisées'),
@@ -163,7 +164,38 @@ class AccountSalesExpenseReport(models.Model):
 
         return 'Virement'
 
+    def _get_reconciled_amount_between(self, pay, inv):
+        """Calcule le montant exact lettré entre un paiement et une facture spécifique."""
+        try:
+            pay_lines = pay.move_id.line_ids.filtered(lambda l: l.account_id.account_type in ('asset_receivable', 'liability_payable'))
+            inv_lines = inv.line_ids.filtered(lambda l: l.account_id.account_type in ('asset_receivable', 'liability_payable'))
+            total_allocated = 0.0
+            for pl in pay_lines:
+                for pr in (pl.matched_debit_ids | pl.matched_credit_ids):
+                    other_line = pr.debit_move_id if pr.credit_move_id.id == pl.id else pr.credit_move_id
+                    if other_line in inv_lines:
+                        total_allocated += pr.amount
+            if total_allocated > 0.005:
+                return total_allocated
+        except Exception:
+            pass
+
+        try:
+            wjson = inv.invoice_payments_widget
+            if wjson:
+                if isinstance(wjson, (bytes, bytearray)):
+                    wjson = wjson.decode('utf-8')
+                wd = json.loads(wjson) if isinstance(wjson, str) else wjson
+                for item in wd.get('content', []):
+                    if item.get('account_payment_id') == pay.id:
+                        return item.get('amount', 0.0)
+        except Exception:
+            pass
+
+        return min(pay.amount, inv.amount_total)
+
     def get_report_data(self):
+
         """
         Calcule toutes les données consolidées :
         - Ventes (Factures et Avoirs Clients)
@@ -280,6 +312,8 @@ class AccountSalesExpenseReport(models.Model):
         # Trésorerie par mode
         treasury_modes = ['Espèces', 'Virement', 'Chèque', 'Effet', 'Carte bancaire', 'Autre']
         treasury = {m: {'in': 0.0, 'out': 0.0, 'net': 0.0} for m in treasury_modes}
+        payments_by_mode = {m: 0.0 for m in treasury_modes}
+        detailed_payments = []
 
         # Listes détaillées
         invoices_list = []
@@ -288,6 +322,8 @@ class AccountSalesExpenseReport(models.Model):
         vendor_refunds_list = []
         hr_expenses_list = []
         direct_expenses_list = []
+        cheques_list = []
+        cheques_seen = set()
 
         # Cumuls Ventes
         sales_untaxed = 0.0
@@ -308,6 +344,10 @@ class AccountSalesExpenseReport(models.Model):
         # ------------------- Traitement des Ventes -------------------
         for move in sale_moves:
             sign = 1 if move.move_type == 'out_invoice' else -1
+            mode = 'Espèces'
+            check_client = ''
+            check_num = ''
+            check_due = False
             total_ttc = move.amount_total
             total_ht = move.amount_untaxed
             total_tva = total_ttc - total_ht
@@ -317,7 +357,7 @@ class AccountSalesExpenseReport(models.Model):
             # Recherche du paiement lié (account.payment) pour extraire mode réel et informations de chèque
             linked_pay = False
             for p in (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])):
-                if p.exists():
+                if p.exists() and p.company_id == self.company_id:
                     linked_pay = p
                     break
             if not linked_pay:
@@ -331,24 +371,60 @@ class AccountSalesExpenseReport(models.Model):
                             pid = item.get('account_payment_id')
                             if pid:
                                 p = self.env['account.payment'].browse(pid)
-                                if p.exists():
+                                if p.exists() and p.company_id == self.company_id:
                                     linked_pay = p
                                     break
                     except Exception:
                         pass
 
+
             if linked_pay:
                 mode = self._determine_move_payment_mode(move, payment=linked_pay)
-                check_client = getattr(linked_pay, 'check_client_name', False) or getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
-                check_num = getattr(linked_pay, 'check_number', False) or getattr(move, 'check_number', False) or ''
-                check_due = getattr(linked_pay, 'check_date_due', False) or getattr(move, 'check_date_due', False) or False
+                if mode in ('Chèque', 'Effet'):
+                    check_client = getattr(linked_pay, 'check_client_name', False) or getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
+                    check_num = getattr(linked_pay, 'check_number', False) or getattr(move, 'check_number', False) or ''
+                    check_due = getattr(linked_pay, 'check_date_due', False) or getattr(move, 'check_date_due', False) or False
+                else:
+                    check_client = ''
+                    check_num = ''
+                    check_due = False
             else:
                 mode = self._determine_move_payment_mode(move)
-                check_client = getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
-                check_num = getattr(move, 'check_number', False) or ''
-                check_due = getattr(move, 'check_date_due', False) or False
+                if mode in ('Chèque', 'Effet'):
+                    check_client = getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
+                    check_num = getattr(move, 'check_number', False) or ''
+                    check_due = getattr(move, 'check_date_due', False) or False
+                else:
+                    check_client = ''
+                    check_num = ''
+                    check_due = False
 
             due_str = check_due.strftime('%d/%m/%Y') if hasattr(check_due, 'strftime') else (str(check_due) if check_due else '')
+
+            # Extraction des dates de règlement pour traçabilité
+            pay_dates_set = []
+            for p in (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])):
+                if p.exists() and p.date:
+                    d_str = p.date.strftime('%d/%m/%Y')
+                    if d_str not in pay_dates_set:
+                        pay_dates_set.append(d_str)
+
+            if not pay_dates_set and move.invoice_payments_widget:
+                try:
+                    wjson = move.invoice_payments_widget
+                    if isinstance(wjson, (bytes, bytearray)):
+                        wjson = wjson.decode('utf-8')
+                    wd = json.loads(wjson) if isinstance(wjson, str) else wjson
+                    for item in wd.get('content', []):
+                        d = item.get('date')
+                        if d:
+                            d_str = d.strftime('%d/%m/%Y') if hasattr(d, 'strftime') else str(d)
+                            if d_str not in pay_dates_set:
+                                pay_dates_set.append(d_str)
+                except Exception:
+                    pass
+
+            payment_date_str = ', '.join(pay_dates_set) if pay_dates_set else False
 
             item_data = {
                 'id': move.id,
@@ -359,6 +435,7 @@ class AccountSalesExpenseReport(models.Model):
                 'check_client_name': check_client,
                 'check_number': check_num,
                 'check_date_due': due_str,
+                'payment_date': payment_date_str,
                 'total_ht': total_ht,
                 'total_tva': total_tva,
                 'total_ttc': total_ttc,
@@ -395,13 +472,221 @@ class AccountSalesExpenseReport(models.Model):
                             if pmode not in treasury:
                                 pmode = 'Autre'
                             treasury[pmode]['in'] += amt
+                            payments_by_mode[pmode] = payments_by_mode.get(pmode, 0.0) + amt
                             allocated += amt
+                            detailed_payments.append({
+                                'mode': pmode,
+                                'amount': amt,
+                                'invoice_name': move.name,
+                            })
+
+                            if pmode in ('Chèque', 'Effet'):
+                                p_num = ''
+                                p_client = ''
+                                if pay and pay.exists():
+                                    p_num = getattr(pay, 'check_number', False) or getattr(pay, 'memo', False) or check_num
+                                    p_client = getattr(pay, 'check_client_name', False) or (pay.partner_id.name if pay.partner_id else check_client)
+                                else:
+                                    p_num = check_num
+                                    p_client = check_client
+
                     except Exception:
                         pass
                 unallocated = paid_amount - allocated
                 if abs(unallocated) > 0.005:
                     inv_mode = mode if mode in treasury else 'Autre'
                     treasury[inv_mode]['in'] += unallocated * sign
+                    payments_by_mode[inv_mode] = payments_by_mode.get(inv_mode, 0.0) + (unallocated * sign)
+                    detailed_payments.append({
+                        'mode': inv_mode,
+                        'amount': unallocated * sign,
+                        'invoice_name': move.name,
+                    })
+
+        # Traçabilité des règlements de factures antérieures (Créances recouvrées durant la période)
+        period_payments = self.env['account.payment'].search([
+            ('company_id', '=', self.company_id.id),
+            ('date', '>=', self.date_start),
+            ('date', '<=', self.date_end),
+            ('payment_type', '=', 'inbound'),
+            ('state', 'in', ('posted', 'paid'))
+        ], order='date asc, id asc')
+
+        prior_payments_list = []
+        prior_payments_total = 0.0
+
+        for pay in period_payments:
+            # RÈGLE FONDAMENTALE : Ne retenir que les factures dont la date est <= date de fin du rapport!
+            # Les mouvements postérieurs (inv.date > self.date_end) n'existaient pas encore à cette date.
+            valid_reconciled_invs = pay.reconciled_invoice_ids.filtered(
+                lambda m: m.move_type in ('out_invoice', 'out_refund') 
+                and m.company_id == self.company_id 
+                and m.date <= self.date_end
+            )
+            prior_invs = valid_reconciled_invs.filtered(lambda m: m.id not in sale_moves.ids and m.date < self.date_start)
+            current_invs = valid_reconciled_invs.filtered(lambda m: m.id in sale_moves.ids)
+
+            p_mode_raw = getattr(pay, 'payment_mode', False)
+            if not p_mode_raw:
+                j_name = (pay.journal_id.name or '').lower()
+                j_type = pay.journal_id.type or ''
+                if 'chèque' in j_name or 'cheque' in j_name:
+                    p_mode_raw = 'cheque'
+                elif 'effet' in j_name or 'traite' in j_name:
+                    p_mode_raw = 'effet'
+                elif 'virement' in j_name or j_type == 'bank':
+                    p_mode_raw = 'virement'
+                elif j_type == 'cash' or 'espece' in j_name or 'caisse' in j_name:
+                    p_mode_raw = 'especes'
+
+            mode_map = {
+                'especes': 'Espèces',
+                'cheque': 'Chèque',
+                'effet': 'Effet',
+                'traite': 'Effet',
+                'effet_cheque': 'Effet',
+                'virement': 'Virement'
+            }
+            pay_mode_label = mode_map.get(p_mode_raw, pay.journal_id.name or 'Autre')
+
+            chk_num = (getattr(pay, 'check_number', False) or getattr(pay, 'memo', False) or '') if pay_mode_label in ('Chèque', 'Effet') else ''
+            chk_client = (getattr(pay, 'check_client_name', False) or (pay.partner_id.name if pay.partner_id else '')) if pay_mode_label in ('Chèque', 'Effet') else ''
+            chk_due = getattr(pay, 'check_date_due', False) if pay_mode_label in ('Chèque', 'Effet') else False
+            chk_due_str = chk_due.strftime('%d/%m/%Y') if hasattr(chk_due, 'strftime') else (str(chk_due) if chk_due else '')
+
+            total_allocated_to_prior = 0.0
+            for inv in prior_invs:
+                inv_alloc = self._get_reconciled_amount_between(pay, inv)
+                inv_alloc = min(inv_alloc, pay.amount)
+                total_allocated_to_prior += inv_alloc
+                prior_payments_total += inv_alloc
+
+                prior_payments_list.append({
+                    'payment_id': pay.id,
+                    'payment_name': pay.name,
+                    'payment_date': pay.date,
+                    'invoice_id': inv.id,
+                    'invoice_name': inv.name or '/',
+                    'invoice_date': inv.date,
+                    'partner': inv.partner_id.name or pay.partner_id.name or 'Client divers',
+                    'mode': pay_mode_label,
+                    'check_number': chk_num,
+                    'check_client_name': chk_client,
+                    'check_date_due': chk_due_str,
+                    'amount': inv_alloc,
+                    'type': 'Facture Antérieure'
+                })
+                t_mode = pay_mode_label if pay_mode_label in treasury else 'Autre'
+                treasury[t_mode]['in'] += inv_alloc
+                payments_by_mode[t_mode] = payments_by_mode.get(t_mode, 0.0) + inv_alloc
+                detailed_payments.append({
+                    'mode': t_mode,
+                    'amount': inv_alloc,
+                    'invoice_name': f"{inv.name} (Antérieure)",
+                })
+
+            # Reliquat Acompte / Avance non encore alloué aux factures antérieures ou du jour
+            allocated_to_current = sum(
+                (inv.amount_total - inv.amount_residual) for inv in current_invs
+            ) if current_invs else 0.0
+            unallocated_advance = max(0.0, pay.amount - total_allocated_to_prior - allocated_to_current)
+
+            if unallocated_advance > 0.005 and not current_invs:
+                prior_payments_total += unallocated_advance
+                prior_payments_list.append({
+                    'payment_id': pay.id,
+                    'payment_name': pay.name,
+                    'payment_date': pay.date,
+                    'invoice_id': False,
+                    'invoice_name': 'Acompte / Avance',
+                    'invoice_date': pay.date,
+                    'partner': pay.partner_id.name or 'Client divers',
+                    'mode': pay_mode_label,
+                    'check_number': chk_num,
+                    'check_client_name': chk_client,
+                    'check_date_due': chk_due_str,
+                    'amount': unallocated_advance,
+                    'type': 'Acompte libre'
+                })
+                t_mode = pay_mode_label if pay_mode_label in treasury else 'Autre'
+                treasury[t_mode]['in'] += unallocated_advance
+                payments_by_mode[t_mode] = payments_by_mode.get(t_mode, 0.0) + unallocated_advance
+                detailed_payments.append({
+                    'mode': t_mode,
+                    'amount': unallocated_advance,
+                    'invoice_name': 'Acompte / Avance',
+                })
+
+            # TABLE DES CHÈQUES & EFFETS : UNE SEULE LIGNE PAR CHÈQUE PHYSIQUE (MONTANT DU CHÈQUE)
+            if pay_mode_label in ('Chèque', 'Effet'):
+                pay_key = pay.id
+                if pay_key not in cheques_seen:
+                    cheques_seen.add(pay_key)
+                    if valid_reconciled_invs:
+                        inv_names = ', '.join([m.name for m in valid_reconciled_invs if m.name])
+                        total_inv_alloc = sum(self._get_reconciled_amount_between(pay, inv) for inv in valid_reconciled_invs)
+                        if total_inv_alloc < pay.amount - 0.005:
+                            state_str = f"Encaissé ({inv_names} + Acompte)"
+                            inv_display = f"{inv_names} (+ Acompte)"
+                        else:
+                            state_str = f"Encaissé ({inv_names})"
+                            inv_display = inv_names
+                    else:
+                        inv_display = 'Acompte / Avance'
+                        state_str = 'Encaissé (Acompte)'
+
+                    cheques_list.append({
+                        'date': pay.date,
+                        'invoice_name': inv_display,
+                        'partner': pay.partner_id.name or 'Client divers',
+                        'check_client_name': chk_client or pay.partner_id.name or '-',
+                        'check_number': chk_num or '-',
+                        'check_date_due': chk_due_str or '-',
+                        'amount': pay.amount,
+                        'mode': pay_mode_label,
+                        'payment_state': state_str
+                    })
+
+        # Ajouter les factures du jour en chèque/effet non encore lettrées à un paiement
+        for move in sale_moves:
+            inv_mode = self._determine_move_payment_mode(move)
+            if inv_mode in ('Chèque', 'Effet'):
+                linked_p = (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])).filtered(lambda p: p.id in cheques_seen)
+                if not linked_p and move.id not in cheques_seen:
+                    has_prior_check = False
+                    if move.invoice_payments_widget:
+                        try:
+                            wj = move.invoice_payments_widget
+                            if isinstance(wj, (bytes, bytearray)):
+                                wj = wj.decode('utf-8')
+                            wjd = json.loads(wj) if isinstance(wj, str) else wj
+                            for item in wjd.get('content', []):
+                                p_id = item.get('account_payment_id')
+                                if p_id:
+                                    p_obj = self.env['account.payment'].browse(p_id)
+                                    if p_obj.exists() and p_obj.date < self.date_start:
+                                        has_prior_check = True
+                                        break
+                        except Exception:
+                            pass
+                    if not has_prior_check:
+                        cheques_seen.add(move.id)
+                        check_n = getattr(move, 'check_number', False) or '-'
+                        check_c = getattr(move, 'check_client_name', False) or move.partner_id.name or '-'
+                        check_d = getattr(move, 'check_date_due', False)
+                        d_str = check_d.strftime('%d/%m/%Y') if hasattr(check_d, 'strftime') else (str(check_d) if check_d else '-')
+                        cheques_list.append({
+                            'date': move.date,
+                            'invoice_name': move.name or '/',
+                            'partner': move.partner_id.name or 'Client divers',
+                            'check_client_name': check_c,
+                            'check_number': check_n,
+                            'check_date_due': d_str,
+                            'amount': move.amount_total,
+                            'mode': inv_mode,
+                            'payment_state': payment_states_map.get(move.payment_state, move.payment_state or 'Non payé')
+                        })
+
 
         # ------------------- Traitement des Charges & Factures Fournisseurs -------------------
         for move in purchase_moves:
@@ -595,6 +880,10 @@ class AccountSalesExpenseReport(models.Model):
             # Total Global Dépenses
             'total_expenses_global': total_exp_global,
 
+            # Encaissements sur Factures Antérieures (Créances)
+            'prior_payments_total': prior_payments_total,
+            'prior_payments_count': len(prior_payments_list),
+
             # Bilan & Solde Net
             'net_result': net_result,
             'net_cash_flow': net_cash_flow,
@@ -612,14 +901,66 @@ class AccountSalesExpenseReport(models.Model):
                     'net': treasury[m]['net'],
                 })
 
+        # Ventilation des Règlements : Total par type de règlement (identique au Rapport des Ventes)
+        order_priority = ['Espèces', 'Virement', 'Chèque', 'Effet', 'Carte bancaire', 'Autre']
+        all_present_modes = []
+        for m in order_priority:
+            if abs(payments_by_mode.get(m, 0.0)) > 0.005:
+                all_present_modes.append(m)
+        for m in sorted(payments_by_mode.keys()):
+            if m not in all_present_modes and abs(payments_by_mode.get(m, 0.0)) > 0.005:
+                all_present_modes.append(m)
+
+        payments_list = []
+        for mode in all_present_modes:
+            mode_amount = payments_by_mode.get(mode, 0.0)
+            mode_payments = [p for p in detailed_payments if p['mode'] == mode]
+            payments_list.append({
+                'mode': mode,
+                'count': len(mode_payments),
+                'amount': mode_amount,
+            })
+
+        payments_total = sum(p['amount'] for p in payments_list)
+        summary['payments_total'] = payments_total
+        summary['total_collected'] = payments_total
+
+        # Encaissements sur Factures Antérieures (Créances Recouvrées) par mode
+        prior_payments_by_mode = {}
+        for pp in prior_payments_list:
+            m = pp.get('mode') or 'Autre'
+            prior_payments_by_mode[m] = prior_payments_by_mode.get(m, 0.0) + pp.get('amount', 0.0)
+
+        prior_payments_summary = [
+            {'mode': m, 'amount': amt}
+            for m, amt in sorted(prior_payments_by_mode.items(), key=lambda x: (
+                0 if x[0] == 'Espèces' else (1 if x[0] == 'Virement' else (2 if x[0] == 'Chèque' else (3 if x[0] == 'Effet' else 4)))
+            ))
+            if amt > 0.005
+        ]
+
+        summary['prior_payments_by_mode'] = prior_payments_by_mode
+        summary['prior_payments_summary'] = prior_payments_summary
+
         return {
             'summary': summary,
+            'payments': payments_list,
             'treasury': treasury_list,
             'treasury_totals': {
                 'in': sum(t['in'] for t in treasury_list),
                 'out': sum(t['out'] for t in treasury_list),
                 'net': sum(t['net'] for t in treasury_list),
             },
+            'cheques': cheques_list,
+            'cheques_count': len(cheques_list),
+            'cheques_total_amount': sum(c['amount'] for c in cheques_list if c['mode'] == 'Chèque'),
+            'effets_total_amount': sum(c['amount'] for c in cheques_list if c['mode'] == 'Effet'),
+            'cheques_global_amount': sum(c['amount'] for c in cheques_list),
+            'prior_payments': prior_payments_list,
+            'prior_payments_count': len(prior_payments_list),
+            'prior_payments_total': prior_payments_total,
+            'prior_payments_by_mode': prior_payments_by_mode,
+            'prior_payments_summary': prior_payments_summary,
             'invoices': invoices_list,
             'refunds': refunds_list,
             'vendor_bills': vendor_bills_list,

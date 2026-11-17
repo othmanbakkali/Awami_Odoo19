@@ -12,7 +12,7 @@ class SaleOrder(models.Model):
         ('traite', 'Effet / Traite'),
         ('effet_cheque', 'Effet / Chèque'),
         ('especes', 'Espèces'),
-    ], string="Mode de règlement", default='virement', tracking=True)
+    ], string="Mode de règlement", default='especes', tracking=True)
 
     check_number = fields.Char(
         string="N° de série / Chèque / Effet",
@@ -37,14 +37,23 @@ class SaleOrder(models.Model):
 
     @api.onchange('partner_id')
     def _onchange_partner_id_check_client(self):
-        if self.partner_id and not self.check_client_name:
-            self.check_client_name = self.partner_id.name
+        if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
+            if self.partner_id and not self.check_client_name:
+                self.check_client_name = self.partner_id.name
+        else:
+            self.check_client_name = False
+            self.check_number = False
+            self.check_date_due = False
 
     @api.onchange('payment_mode')
     def _onchange_payment_mode_check(self):
         if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
             if self.partner_id and not self.check_client_name:
                 self.check_client_name = self.partner_id.name
+        else:
+            self.check_client_name = False
+            self.check_number = False
+            self.check_date_due = False
 
     # Les informations de chèque / effet sont saisies au niveau du Paiement
 

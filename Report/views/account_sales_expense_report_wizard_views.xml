@@ -22,11 +22,12 @@
                         </group>
                         <group string="Périmètre &amp; Filtrage">
                             <field name="company_id" options="{'no_create': True}"/>
-                            <field name="sale_journal_id" options="{'no_create': True}"/>
-                            <field name="purchase_journal_id" options="{'no_create': True}"/>
+                            <field name="sale_journal_id" options="{'no_create': True}" domain="[('type', '=', 'sale'), ('company_id', '=', company_id)]"/>
+                            <field name="purchase_journal_id" options="{'no_create': True}" domain="[('type', '=', 'purchase'), ('company_id', '=', company_id)]"/>
                             <field name="salesperson_id" options="{'no_create': True}"/>
                             <field name="invoice_state"/>
                         </group>
+
                     </group>
                 </sheet>
 

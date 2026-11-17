@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================================================================= -->
+    <!-- VUE LISTE (TREE / LIST) DES RÔLES                                 -->
+    <!-- ================================================================= -->
+    <record id="view_res_users_role_list" model="ir.ui.view">
+        <field name="name">res.users.role.list</field>
+        <field name="model">res.users.role</field>
+        <field name="arch" type="xml">
+            <list string="Rôles &amp; Profils Utilisateurs"
+                  decoration-muted="not active"
+                  decoration-info="is_readonly_role">
+                <field name="sequence" widget="handle"/>
+                <field name="name" string="Nom du Rôle" class="fw-bold"/>
+                <field name="code" string="Code Réf"/>
+                <field name="users_count" string="Nb Utilisateurs" class="fw-bold"/>
+                <field name="is_readonly_role" string="Lecture Seule" widget="boolean"/>
+                <field name="prevent_invoice_unlink" string="Anti-Suppr Facture" widget="boolean" optional="show"/>
+                <field name="prevent_payment_unlink" string="Anti-Suppr Paiement" widget="boolean" optional="show"/>
+                <field name="active" string="Actif" widget="boolean" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- VUE KANBAN DES RÔLES                                              -->
+    <!-- ================================================================= -->
+    <record id="view_res_users_role_kanban" model="ir.ui.view">
+        <field name="name">res.users.role.kanban</field>
+        <field name="model">res.users.role</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="color"/>
+                <field name="users_count"/>
+                <field name="is_readonly_role"/>
+                <field name="description"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex flex-column gap-2 p-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h4 class="mb-0 fw-bold text-primary">
+                                    <t t-esc="record.name.value"/>
+                                </h4>
+                                <span t-if="record.code.value" class="badge bg-secondary">
+                                    <t t-esc="record.code.value"/>
+                                </span>
+                            </div>
+
+                            <p t-if="record.description.value" class="text-muted small mb-1 text-truncate">
+                                <t t-esc="record.description.value"/>
+                            </p>
+
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                <div>
+                                    <span class="badge bg-info text-white me-1">
+                                        <i class="fa fa-users me-1" title="Utilisateurs"/>
+                                        <t t-esc="record.users_count.value"/> Utilisateur(s)
+                                    </span>
+                                    <span t-if="record.is_readonly_role.raw_value" class="badge bg-warning text-dark">
+                                        <i class="fa fa-eye me-1" title="Lecture Seule"/> Lecture Seule
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- VUE FORMULAIRE DU RÔLE                                            -->
+    <!-- ================================================================= -->
+    <record id="view_res_users_role_form" model="ir.ui.view">
+        <field name="name">res.users.role.form</field>
+        <field name="model">res.users.role</field>
+        <field name="arch" type="xml">
+            <form string="Rôle &amp; Profil Utilisateur">
+                <header>
+                    <button name="action_apply_role" string="Appliquer / Synchroniser les Droits"
+                            type="object" class="btn-primary" icon="fa-refresh"/>
+                    <button name="action_populate_default_models" string="Charger les Modèles Clés (Bons, Factures, Paiements...)"
+                            type="object" class="btn-secondary" icon="fa-list"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only" string="Nom du Rôle"/>
+                        <h1>
+                            <field name="name" placeholder="Ex: Caissier Magasin, Commercial Ventes, Responsable Facturation..."/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Informations Générales">
+                            <field name="code" placeholder="Ex: CAISSE, COMM, COMPTA..."/>
+                            <field name="active" widget="boolean_toggle"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group string="Profil &amp; Mode">
+                            <field name="is_readonly_role" widget="boolean_toggle"/>
+                            <field name="users_count" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Description / Missions du Rôle">
+                        <field name="description" nolabel="1" placeholder="Détaillez ici les prérogatives, responsabilités et périmètre accordés à ce rôle..."/>
+                    </group>
+
+                    <notebook>
+                        <!-- 1. Matrice des Droits CRUD -->
+                        <page string="Matrice des Droits d'Accès (CRUD)" name="page_matrix">
+                            <div class="alert alert-info py-2 mb-2" role="status">
+                                <i class="fa fa-info-circle me-2" title="Information"/>
+                                Définissez ci-dessous les permissions accordées pour chaque entité métier :
+                                <strong>Lecture</strong> (consulter), <strong>Création</strong> (ajouter), <strong>Modification</strong> (modifier), <strong>Suppression</strong> (supprimer).
+                            </div>
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name" string="Entité / Fonctionnalité" class="fw-bold"/>
+                                    <field name="model_id" string="Modèle Odoo"/>
+                                    <field name="perm_read" string="👁️ Lecture" widget="boolean_toggle"/>
+                                    <field name="perm_create" string="➕ Création" widget="boolean_toggle"/>
+                                    <field name="perm_write" string="✏️ Modification" widget="boolean_toggle"/>
+                                    <field name="perm_unlink" string="🗑️ Suppression" widget="boolean_toggle"/>
+                                    <field name="notes" string="Précisions" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <!-- 2. Sécurité & Anti-Suppression Matérielle -->
+                        <page string="Garde-fous &amp; Anti-Suppression" name="page_guards">
+                            <div class="alert alert-danger py-2 mb-3" role="status">
+                                <i class="fa fa-shield me-2" title="Sécurité"/>
+                                <strong>Protection Matérielle des Données :</strong>
+                                Ces options bloquent techniquement toute tentative de suppression définitive par les utilisateurs de ce rôle, même en cas de droits techniques hérités.
+                            </div>
+                            <group string="Verrouillage des Suppressions Définitives">
+                                <group>
+                                    <field name="prevent_invoice_unlink" widget="boolean_toggle"/>
+                                    <field name="prevent_payment_unlink" widget="boolean_toggle"/>
+                                    <field name="prevent_cheque_unlink" widget="boolean_toggle"/>
+                                </group>
+                                <group>
+                                    <field name="prevent_sale_order_unlink" widget="boolean_toggle"/>
+                                    <field name="prevent_partner_unlink" widget="boolean_toggle"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- 3. Utilisateurs assignés -->
+                        <page string="Utilisateurs Assignés" name="page_users">
+                            <field name="user_ids" widget="many2many">
+                                <list string="Utilisateurs">
+                                    <field name="name" string="Nom"/>
+                                    <field name="login" string="Identifiant / Email"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <!-- 4. Groupes Odoo Avancés -->
+                        <page string="Groupes Odoo Inclus (Avancé)" name="page_advanced">
+                            <div class="text-muted mb-2">
+                                Associez des profils Odoo standards qui seront automatiquement appliqués aux membres de ce rôle.
+                            </div>
+                            <group>
+                                <field name="base_group_ids" widget="many2many_tags" placeholder="Sélectionnez des groupes Odoo standards..."/>
+                                <field name="group_id" readonly="1"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- VUE RECHERCHE DES RÔLES                                           -->
+    <!-- ================================================================= -->
+    <record id="view_res_users_role_search" model="ir.ui.view">
+        <field name="name">res.users.role.search</field>
+        <field name="model">res.users.role</field>
+        <field name="arch" type="xml">
+            <search string="Recherche Rôles">
+                <field name="name" string="Nom du Rôle"/>
+                <field name="code" string="Code Réf"/>
+                <field name="user_ids" string="Utilisateur"/>
+                <filter string="Rôles Actifs" name="active_roles" domain="[('active', '=', True)]"/>
+                <filter string="Archivés" name="archived_roles" domain="[('active', '=', False)]"/>
+                <filter string="Consultation Seule" name="readonly_roles" domain="[('is_readonly_role', '=', True)]"/>
+                <separator/>
+                <filter string="Avec Utilisateurs" name="has_users" domain="[('users_count', '&gt;', 0)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- ================================================================= -->
+    <!-- ACTION DE FENÊTRE : RÔLES UTILISATEURS                            -->
+    <!-- ================================================================= -->
+    <record id="action_res_users_role" model="ir.actions.act_window">
+        <field name="name">Rôles &amp; Profils Utilisateurs</field>
+        <field name="res_model">res.users.role</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_res_users_role_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créez votre premier rôle utilisateur
+            </p>
+            <p>
+                Les rôles vous permettent de définir de manière lisible les droits de Lecture, Création, Modification et Suppression pour vos équipes (Caissiers, Commerciaux, Comptables, etc.).
+            </p>
+        </field>
+    </record>
+
+</odoo>

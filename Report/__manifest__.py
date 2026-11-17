@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Rapport Journalier des Ventes, Dépenses et Charges',
-    'version': '19.0.1.0.5',
+    'version': '19.0.1.0.6',
     'category': 'Accounting/Accounting',
     'summary': 'Génération des rapports journaliers de vente avec détail des dépenses, charges, trésorerie et résultat net',
     'description': """
@@ -22,7 +22,9 @@ Ce module permet d'éditer et de clôturer les journées d'activité commerciale
     'depends': ['account', 'awami_bon_magasin', 'hr_expense'],
     'data': [
         'security/ir.model.access.csv',
+        'security/account_sales_expense_report_security.xml',
         'data/ir_sequence_data.xml',
+
         'report/report_sales_expense_reports.xml',
         'report/report_sales_expense_pdf.xml',
         'views/account_sales_expense_report_views.xml',

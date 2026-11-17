@@ -19,7 +19,7 @@ class AccountPayment(models.Model):
         ('traite', 'Effet / Traite'),
         ('effet_cheque', 'Effet / Chèque'),
         ('especes', 'Espèces'),
-    ], string="Mode de règlement", compute="_compute_payment_mode", store=True, readonly=False, tracking=True)
+    ], string="Mode de règlement", compute="_compute_payment_mode", store=True, readonly=False, tracking=True, default='especes')
 
     check_number = fields.Char(
         string="N° de série / Chèque / Effet",
@@ -42,6 +42,30 @@ class AccountPayment(models.Model):
         help="Date d'échéance de l'effet ou date d'encaissement prévue du chèque."
     )
 
+    @api.depends('company_id', 'partner_id', 'payment_mode')
+    def _compute_journal_id(self):
+        super()._compute_journal_id()
+        for payment in self:
+            company = payment.company_id or self.env.company
+            domain = self.env['account.journal']._check_company_domain(company)
+            mode = payment.payment_mode or 'especes'
+            matching_j = False
+            if mode == 'especes':
+                matching_j = self.env['account.journal'].search([*domain, ('type', '=', 'cash')], limit=1)
+            elif mode == 'cheque':
+                matching_j = self.env['account.journal'].search([*domain, ('name', 'ilike', 'chèque')], limit=1)
+            elif mode in ('effet', 'traite', 'effet_cheque'):
+                matching_j = self.env['account.journal'].search([*domain, ('name', 'ilike', 'effet')], limit=1)
+            elif mode == 'virement':
+                matching_j = self.env['account.journal'].search([*domain, ('type', '=', 'bank'), ('name', 'not ilike', 'chèque'), ('name', 'not ilike', 'effet')], limit=1)
+            
+            if matching_j:
+                payment.journal_id = matching_j
+            elif not payment.journal_id:
+                cash_j = self.env['account.journal'].search([*domain, ('type', '=', 'cash')], limit=1)
+                if cash_j:
+                    payment.journal_id = cash_j
+
     @api.depends('payment_method_line_id', 'journal_id')
     def _compute_payment_mode(self):
         for pay in self:
@@ -58,18 +82,60 @@ class AccountPayment(models.Model):
             elif 'espèce' in method_name or 'espece' in method_name or journal_type == 'cash' or 'caisse' in journal_name:
                 pay.payment_mode = 'especes'
             elif not pay.payment_mode:
-                pay.payment_mode = 'virement' if journal_type == 'bank' else 'especes'
+                pay.payment_mode = 'especes'
 
     @api.onchange('partner_id')
     def _onchange_partner_id_check_client(self):
-        if self.partner_id and not self.check_client_name:
-            self.check_client_name = self.partner_id.name
+        if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
+            if self.partner_id and not self.check_client_name:
+                self.check_client_name = self.partner_id.name
+        else:
+            self.check_client_name = False
+            self.check_number = False
+            self.check_date_due = False
 
     @api.onchange('payment_mode')
     def _onchange_payment_mode_check(self):
         if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
             if self.partner_id and not self.check_client_name:
                 self.check_client_name = self.partner_id.name
+        else:
+            self.check_client_name = False
+            self.check_number = False
+            self.check_date_due = False
+
+        company = self.company_id or self.env.company
+        domain = self.env['account.journal']._check_company_domain(company)
+        if self.payment_mode == 'especes':
+            j = self.env['account.journal'].search([*domain, ('type', '=', 'cash')], limit=1)
+            if j:
+                self.journal_id = j
+        elif self.payment_mode == 'cheque':
+            j = self.env['account.journal'].search([*domain, ('name', 'ilike', 'chèque')], limit=1)
+            if j:
+                self.journal_id = j
+        elif self.payment_mode in ('effet', 'traite', 'effet_cheque'):
+            j = self.env['account.journal'].search([*domain, ('name', 'ilike', 'effet')], limit=1)
+            if j:
+                self.journal_id = j
+        elif self.payment_mode == 'virement':
+            j = self.env['account.journal'].search([*domain, ('type', '=', 'bank'), ('name', 'not ilike', 'chèque'), ('name', 'not ilike', 'effet')], limit=1)
+            if j:
+                self.journal_id = j
+
+    @api.onchange('journal_id')
+    def _onchange_journal_id_sync_mode(self):
+        if self.journal_id:
+            j_type = self.journal_id.type or ''
+            j_name = (self.journal_id.name or '').lower()
+            if 'chèque' in j_name or 'cheque' in j_name:
+                self.payment_mode = 'cheque'
+            elif 'effet' in j_name or 'traite' in j_name:
+                self.payment_mode = 'effet'
+            elif 'espèce' in j_name or 'espece' in j_name or j_type == 'cash' or 'caisse' in j_name:
+                self.payment_mode = 'especes'
+            elif 'virement' in j_name or j_type == 'bank':
+                self.payment_mode = 'virement'
 
     def action_mark_as_paid(self):
         """Bouton manuel pour passer le statut de 'En cours de traitement' à 'Payé'."""
@@ -144,7 +210,7 @@ class AccountPaymentRegister(models.TransientModel):
         ('traite', 'Effet / Traite'),
         ('effet_cheque', 'Effet / Chèque'),
         ('especes', 'Espèces'),
-    ], string="Mode de règlement", compute="_compute_payment_mode", store=True, readonly=False)
+    ], string="Mode de règlement", compute="_compute_payment_mode", store=True, readonly=False, default='especes')
 
     check_number = fields.Char(string="N° de série / Chèque / Effet", copy=False)
     check_client_name = fields.Char(string="Nom du client (Chèque / Effet)", copy=False)
@@ -161,6 +227,31 @@ class AccountPaymentRegister(models.TransientModel):
             elif active_model == 'account.move.line':
                 moves = self.env['account.move.line'].browse(active_ids).exists().move_id
         return moves[:1]
+
+    @api.depends('can_edit_wizard')
+    def _compute_journal_id(self):
+        super()._compute_journal_id()
+        for wiz in self:
+            active_move = wiz._get_active_move()
+            mode = getattr(active_move, 'payment_mode', False) if active_move else False
+            if not mode:
+                mode = 'especes'
+            domain = [('company_id', '=', wiz.company_id.id)]
+            matching_journal = False
+            if mode == 'especes':
+                matching_journal = self.env['account.journal'].search(domain + [('type', '=', 'cash')], limit=1)
+            elif mode == 'cheque':
+                matching_journal = self.env['account.journal'].search(domain + [('name', 'ilike', 'chèque')], limit=1)
+            elif mode in ('effet', 'traite', 'effet_cheque'):
+                matching_journal = self.env['account.journal'].search(domain + [('name', 'ilike', 'effet')], limit=1)
+            elif mode == 'virement':
+                matching_journal = self.env['account.journal'].search(domain + [('type', '=', 'bank'), ('name', 'not ilike', 'chèque'), ('name', 'not ilike', 'effet')], limit=1)
+            if matching_journal:
+                wiz.journal_id = matching_journal
+            elif not wiz.journal_id:
+                cash_j = self.env['account.journal'].search(domain + [('type', '=', 'cash')], limit=1)
+                if cash_j:
+                    wiz.journal_id = cash_j
 
     @api.depends('payment_method_line_id', 'journal_id')
     def _compute_payment_mode(self):
@@ -181,42 +272,91 @@ class AccountPaymentRegister(models.TransientModel):
                 active_move = wiz._get_active_move()
                 if active_move and getattr(active_move, 'payment_mode', False):
                     wiz.payment_mode = active_move.payment_mode
-                elif not wiz.payment_mode:
-                    wiz.payment_mode = 'virement' if journal_type == 'bank' else 'especes'
+                else:
+                    wiz.payment_mode = 'especes'
 
-            # Pré-remplissage des informations de chèque / tiers si disponibles
+            # Pré-remplissage des informations de chèque / tiers si disponibles et applicables
             active_move = wiz._get_active_move()
-            if active_move:
-                if not wiz.check_client_name:
-                    wiz.check_client_name = getattr(active_move, 'check_client_name', False) or (active_move.partner_id.name if active_move.partner_id else '')
-                if not wiz.check_number and getattr(active_move, 'check_number', False):
-                    wiz.check_number = active_move.check_number
-                if not wiz.check_date_due and getattr(active_move, 'check_date_due', False):
-                    wiz.check_date_due = active_move.check_date_due
-            elif wiz.partner_id and not wiz.check_client_name:
-                wiz.check_client_name = wiz.partner_id.name
+            if wiz.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
+                if active_move:
+                    if not wiz.check_client_name:
+                        wiz.check_client_name = getattr(active_move, 'check_client_name', False) or (active_move.partner_id.name if active_move.partner_id else '')
+                    if not wiz.check_number and getattr(active_move, 'check_number', False):
+                        wiz.check_number = active_move.check_number
+                    if not wiz.check_date_due and getattr(active_move, 'check_date_due', False):
+                        wiz.check_date_due = active_move.check_date_due
+                elif wiz.partner_id and not wiz.check_client_name:
+                    wiz.check_client_name = wiz.partner_id.name
+            else:
+                wiz.check_client_name = False
+                wiz.check_number = False
+                wiz.check_date_due = False
 
     @api.onchange('partner_id')
     def _onchange_partner_id_check_client(self):
-        if self.partner_id and not self.check_client_name:
-            self.check_client_name = self.partner_id.name
+        if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
+            if self.partner_id and not self.check_client_name:
+                self.check_client_name = self.partner_id.name
+        else:
+            self.check_client_name = False
+            self.check_number = False
+            self.check_date_due = False
 
     @api.onchange('payment_mode')
     def _onchange_payment_mode_check(self):
         if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
             if self.partner_id and not self.check_client_name:
                 self.check_client_name = self.partner_id.name
+        else:
+            self.check_client_name = False
+            self.check_number = False
+            self.check_date_due = False
+
+        company = self.company_id or self.env.company
+        domain = self.env['account.journal']._check_company_domain(company)
+        if self.payment_mode == 'especes':
+            j = self.env['account.journal'].search([*domain, ('type', '=', 'cash')], limit=1)
+            if j:
+                self.journal_id = j
+        elif self.payment_mode == 'cheque':
+            j = self.env['account.journal'].search([*domain, ('name', 'ilike', 'chèque')], limit=1)
+            if j:
+                self.journal_id = j
+        elif self.payment_mode in ('effet', 'traite', 'effet_cheque'):
+            j = self.env['account.journal'].search([*domain, ('name', 'ilike', 'effet')], limit=1)
+            if j:
+                self.journal_id = j
+        elif self.payment_mode == 'virement':
+            j = self.env['account.journal'].search([*domain, ('type', '=', 'bank'), ('name', 'not ilike', 'chèque'), ('name', 'not ilike', 'effet')], limit=1)
+            if j:
+                self.journal_id = j
+
+    @api.onchange('journal_id')
+    def _onchange_journal_id_sync_mode(self):
+        if self.journal_id:
+            j_type = self.journal_id.type or ''
+            j_name = (self.journal_id.name or '').lower()
+            if 'chèque' in j_name or 'cheque' in j_name:
+                self.payment_mode = 'cheque'
+            elif 'effet' in j_name or 'traite' in j_name:
+                self.payment_mode = 'effet'
+            elif 'espèce' in j_name or 'espece' in j_name or j_type == 'cash' or 'caisse' in j_name:
+                self.payment_mode = 'especes'
+            elif 'virement' in j_name or j_type == 'bank':
+                self.payment_mode = 'virement'
 
     def _create_payment_vals_from_wizard(self, batch_result):
         payment_vals = super()._create_payment_vals_from_wizard(batch_result)
         if self.payment_mode:
             payment_vals['payment_mode'] = self.payment_mode
-        if self.check_number:
-            payment_vals['check_number'] = self.check_number
-        if self.check_client_name:
-            payment_vals['check_client_name'] = self.check_client_name
-        if self.check_date_due:
-            payment_vals['check_date_due'] = self.check_date_due
+        if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
+            payment_vals['check_number'] = self.check_number or False
+            payment_vals['check_client_name'] = self.check_client_name or False
+            payment_vals['check_date_due'] = self.check_date_due or False
+        else:
+            payment_vals['check_number'] = False
+            payment_vals['check_client_name'] = False
+            payment_vals['check_date_due'] = False
         return payment_vals
 
     def _create_payments(self):
@@ -225,12 +365,14 @@ class AccountPaymentRegister(models.TransientModel):
         vals = {}
         if self.payment_mode:
             vals['payment_mode'] = self.payment_mode
-        if self.check_number:
-            vals['check_number'] = self.check_number
-        if self.check_client_name:
-            vals['check_client_name'] = self.check_client_name
-        if self.check_date_due:
-            vals['check_date_due'] = self.check_date_due
+        if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
+            vals['check_number'] = self.check_number or False
+            vals['check_client_name'] = self.check_client_name or False
+            vals['check_date_due'] = self.check_date_due or False
+        else:
+            vals['check_number'] = False
+            vals['check_client_name'] = False
+            vals['check_date_due'] = False
         if vals:
             for move in moves:
                 if move.is_invoice(include_receipts=True):

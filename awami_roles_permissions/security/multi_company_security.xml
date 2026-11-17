@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Forcer noupdate=False sur les règles standards pour permettre leur mise à jour -->
+        <function model="ir.model.data" name="write">
+            <value model="ir.model.data" search="[
+                ('module', 'in', ['account', 'sale', 'stock']),
+                ('name', 'in', [
+                    'account_move_comp_rule',
+                    'account_move_line_comp_rule',
+                    'account_payment_comp_rule',
+                    'sale_order_comp_rule',
+                    'sale_order_line_comp_rule',
+                    'stock_picking_rule',
+                    'stock_move_rule',
+                    'stock_move_line_rule'
+                ])
+            ]"/>
+            <value eval="{'noupdate': False}"/>
+        </function>
+
+        <!-- Règles Multi-Sociétés Strictes par Enseigne Active (company_ids) -->
+        <!-- N'affiche que les mouvements de l'enseigne sélectionnée en haut à droite -->
+        
+        <!-- 1. Pièces Comptables (account.move) -->
+        <record id="account.account_move_comp_rule" model="ir.rule">
+            <field name="name">Account Entry</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <!-- 2. Lignes d'Écritures Comptables (account.move.line) -->
+        <record id="account.account_move_line_comp_rule" model="ir.rule">
+            <field name="name">Entry lines</field>
+            <field name="model_id" ref="account.model_account_move_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <!-- 3. Paiements (account.payment) -->
+        <record id="account.account_payment_comp_rule" model="ir.rule">
+            <field name="name">Account payment company rule</field>
+            <field name="model_id" ref="account.model_account_payment"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <!-- 4. Bons de Commande / Vente (sale.order) -->
+        <record id="sale.sale_order_comp_rule" model="ir.rule">
+            <field name="name">Sales Order multi-company</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <!-- 5. Lignes de Commande (sale.order.line) -->
+        <record id="sale.sale_order_line_comp_rule" model="ir.rule">
+            <field name="name">Sales Order Line multi-company</field>
+            <field name="model_id" ref="sale.model_sale_order_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <!-- 6. Transferts de Stock / Bons de Livraison (stock.picking) -->
+        <record id="stock.stock_picking_rule" model="ir.rule">
+            <field name="name">stock_picking multi-company</field>
+            <field name="model_id" ref="stock.model_stock_picking"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <!-- 7. Mouvements de Stock (stock.move) -->
+        <record id="stock.stock_move_rule" model="ir.rule">
+            <field name="name">stock_move multi-company</field>
+            <field name="model_id" ref="stock.model_stock_move"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <!-- 8. Lignes de Mouvements de Stock (stock.move.line) -->
+        <record id="stock.stock_move_line_rule" model="ir.rule">
+            <field name="name">stock_move_line multi-company</field>
+            <field name="model_id" ref="stock.model_stock_move_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+    </data>
+</odoo>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Suivi Factures & Avances',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'category': 'Accounting/Accounting',
     'summary': 'Suivi des Factures et Avances clients avec gestion des mouvements masqués',
     'description': """
@@ -17,6 +17,7 @@ Module de Suivi des Factures et Avances pour Odoo 19:
     'depends': ['account'],
     'data': [
         'security/ir.model.access.csv',
+        'security/report_facture_avance_security.xml',
         'views/account_move_views.xml',
         'views/report_facture_avance_view.xml',
     ],

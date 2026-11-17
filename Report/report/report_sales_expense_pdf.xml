@@ -10,7 +10,7 @@
                     <style>
                         body {
                             font-family: 'DejaVu Sans', Arial, sans-serif !important;
-                            color: #1e293b;
+                            color: #2c1810;
                             font-size: 9.5pt;
                             margin: 0;
                             padding: 0;
@@ -20,7 +20,7 @@
                         }
                         .header-box {
                             width: 100%;
-                            border-bottom: 2.5px solid #1e3a8a;
+                            border-bottom: 2.5px solid #543216;
                             padding-bottom: 8px;
                             margin-bottom: 10px;
                         }
@@ -48,7 +48,7 @@
                         }
                         
                         .section-title {
-                            background-color: #1e3a8a;
+                            background-color: #543216;
                             color: #ffffff;
                             padding: 5px 9px;
                             font-weight: 900;
@@ -59,13 +59,13 @@
                             margin-top: 12px;
                         }
                         .section-title-green {
-                            background-color: #166534;
+                            background-color: #543216;
                         }
                         .section-title-amber {
-                            background-color: #b45309;
+                            background-color: #854d0e;
                         }
                         .section-title-red {
-                            background-color: #991b1b;
+                            background-color: #7f1d1d;
                         }
                         
                         .data-table {
@@ -74,21 +74,22 @@
                             margin-bottom: 10px;
                         }
                         .data-table th {
-                            background-color: #f1f5f9;
-                            color: #1e293b;
+                            background-color: #f5ede3;
+                            color: #4a2c11;
                             font-weight: 800;
                             font-size: 8.5pt;
                             padding: 5px 7px;
-                            border: 1px solid #cbd5e1;
+                            border: 1px solid #d7c4b1;
                             text-align: left;
                         }
                         .data-table td {
                             padding: 4px 7px;
-                            border: 1px solid #e2e8f0;
+                            border: 1px solid #e7ded5;
                             font-size: 8.5pt;
+                            color: #1c1917;
                         }
                         .data-table tr:nth-child(even) td {
-                            background-color: #f8fafc;
+                            background-color: #faf6f0;
                         }
                         
                         .badge {
@@ -99,53 +100,53 @@
                             border-radius: 4px;
                             text-transform: uppercase;
                         }
-                        .badge-especes { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; }
-                        .badge-virement { background-color: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
-                        .badge-cheque { background-color: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; }
-                        .badge-effet { background-color: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
-                        .badge-autre { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+                        .badge-especes { background-color: #ecfdf5; color: #166534; border: 1px solid #86efac; }
+                        .badge-virement { background-color: #f5ede3; color: #4a2c11; border: 1px solid #bfa084; }
+                        .badge-cheque { background-color: #fef3c7; color: #78350f; border: 1px solid #fcd34d; }
+                        .badge-effet { background-color: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+                        .badge-autre { background-color: #faf6f0; color: #543216; border: 1px solid #d7c4b1; }
                         
-                        .badge-paid { background-color: #dcfce7; color: #166534; }
-                        .badge-partial { background-color: #fef3c7; color: #b45309; }
+                        .badge-paid { background-color: #ecfdf5; color: #166534; }
+                        .badge-partial { background-color: #fef3c7; color: #854d0e; }
                         .badge-notpaid { background-color: #fee2e2; color: #991b1b; }
                         
                         .total-row {
                             font-weight: 900;
-                            border-top: 2px solid #1e3a8a;
+                            border-top: 2px solid #543216;
                         }
                     </style>
 
                     <div class="page-wrap">
                         
-                        <!-- 1. EN-TÊTE DU RAPPORT -->
+                        <!-- 1. EN-TÊTE DU RAPPORT (AWAMI BOIS) -->
                         <table class="header-box">
                             <tr>
                                 <td style="width: 55%; vertical-align: top;">
-                                    <div style="font-size: 14pt; font-weight: 900; color: #1e3a8a;">
+                                    <div style="font-size: 14pt; font-weight: 900; color: #543216;">
                                         <t t-esc="o.company_id.name"/>
                                     </div>
-                                    <div style="font-size: 8pt; color: #475569; margin-top: 2px;">
+                                    <div style="font-size: 8pt; color: #6b5744; margin-top: 2px;">
                                         <span t-if="o.company_id.street"><t t-esc="o.company_id.street"/>, </span>
                                         <span t-if="o.company_id.city"><t t-esc="o.company_id.city"/></span>
                                     </div>
-                                    <div style="font-size: 8pt; color: #475569; margin-top: 1px;">
+                                    <div style="font-size: 8pt; color: #6b5744; margin-top: 1px;">
                                         <span t-if="o.company_id.ice"><strong>ICE :</strong> <t t-esc="o.company_id.ice"/> | </span>
                                         <span t-if="o.company_id.company_if"><strong>IF :</strong> <t t-esc="o.company_id.company_if"/> | </span>
                                         <span t-if="o.company_id.rc"><strong>RC :</strong> <t t-esc="o.company_id.rc"/></span>
                                     </div>
                                 </td>
                                 <td style="width: 45%; vertical-align: top; text-align: right;">
-                                    <div style="font-size: 13pt; font-weight: 900; color: #1e3a8a; text-transform: uppercase;">
-                                        <t t-if="o.report_type == 'z'">RAPPORT Z - CLÔTURE JOURNALIÈRE</t>
-                                        <t t-else="">RAPPORT X - APERÇU PROVISOIRE</t>
+                                    <div style="font-size: 13pt; font-weight: 900; color: #543216; text-transform: uppercase;">
+                                        <t t-if="o.report_type == 'z'">RAPPORT DES VENTES &amp; DÉPENSES</t>
+                                        <t t-else="">RAPPORT DES VENTES &amp; DÉPENSES (APERÇU)</t>
                                     </div>
-                                    <div style="font-size: 9pt; font-weight: 800; color: #0f172a; margin-top: 2px;">
+                                    <div style="font-size: 9pt; font-weight: 800; color: #2c1810; margin-top: 2px;">
                                         N° <t t-esc="o.name"/>
                                     </div>
-                                    <div style="font-size: 11pt; color: #0f172a; margin-top: 3px; font-weight: 800;">
-                                        <span style="color: #475569;">Période : Du </span><span t-esc="o.date_start" t-options='{"widget": "date", "format": "dd/MM/yyyy"}' style="font-size: 12.5pt; font-weight: 900; color: #1e3a8a; text-decoration: underline;"/><span style="color: #475569;"> au </span><span t-esc="o.date_end" t-options='{"widget": "date", "format": "dd/MM/yyyy"}' style="font-size: 12.5pt; font-weight: 900; color: #1e3a8a; text-decoration: underline;"/>
+                                    <div style="font-size: 11pt; color: #2c1810; margin-top: 3px; font-weight: 800;">
+                                        <span style="color: #6b5744;">Période : Du </span><span t-esc="o.date_start" t-options='{"widget": "date", "format": "dd/MM/yyyy"}' style="font-size: 12.5pt; font-weight: 900; color: #543216; text-decoration: underline;"/><span style="color: #6b5744;"> au </span><span t-esc="o.date_end" t-options='{"widget": "date", "format": "dd/MM/yyyy"}' style="font-size: 12.5pt; font-weight: 900; color: #543216; text-decoration: underline;"/>
                                     </div>
-                                    <div style="font-size: 7.5pt; color: #64748b; margin-top: 2px;">
+                                    <div style="font-size: 7.5pt; color: #7c6a59; margin-top: 2px;">
                                         Édité le <span t-esc="o.date_generation" t-options='{"widget": "datetime", "format": "dd/MM/yyyy HH:mm"}'/> par <span t-field="o.user_id.name"/>
                                     </div>
                                 </td>
@@ -155,12 +156,12 @@
                         <!-- 2. CARTES SYNTHÈSE FINANCIÈRE (KPI) -->
                         <table class="kpi-container">
                             <tr>
-                                <td style="width: 25%; background-color: #dcfce7; border: 1.5px solid #166534;" class="kpi-card">
-                                    <div class="kpi-title" style="color: #166534;">Ventes Nettes TTC</div>
-                                    <div class="kpi-value" style="color: #166534;">
+                                <td style="width: 25%; background-color: #f5ede3; border: 1.5px solid #854d0e;" class="kpi-card">
+                                    <div class="kpi-title" style="color: #543216;">Ventes Nettes TTC</div>
+                                    <div class="kpi-value" style="color: #543216;">
                                         <t t-esc="data['summary']['sales_net']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                     </div>
-                                    <div style="font-size: 7.5pt; color: #166534;">
+                                    <div style="font-size: 7.5pt; color: #78350f;">
                                         <t t-esc="data['summary']['invoice_count']"/> facture(s)
                                     </div>
                                 </td>
@@ -173,23 +174,133 @@
                                         <t t-esc="data['summary']['hr_expenses_count']"/> Salaires/RH + <t t-esc="data['summary']['vendor_bill_count']"/> Charg.
                                     </div>
                                 </td>
-                                <td style="width: 25%; background-color: #eff6ff; border: 1.5px solid #1e3a8a;" class="kpi-card">
-                                    <div class="kpi-title" style="color: #1e3a8a;">Résultat Net Journalier</div>
+                                <td style="width: 25%; background-color: #faf6f0; border: 1.5px solid #543216;" class="kpi-card">
+                                    <div class="kpi-title" style="color: #543216;">Résultat Net Journalier</div>
                                     <div class="kpi-value" t-attf-style="color: #{'#166534' if data['summary']['net_result'] >= 0 else '#991b1b'};">
                                         <t t-esc="data['summary']['net_result']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                     </div>
-                                    <div style="font-size: 7.5pt; color: #1e3a8a;">
+                                    <div style="font-size: 7.5pt; color: #543216;">
                                         Ventes Nettes - Dépenses
                                     </div>
                                 </td>
-                                <td style="width: 25%; background-color: #f0fdf4; border: 1.5px solid #0f766e;" class="kpi-card">
-                                    <div class="kpi-title" style="color: #0f766e;">Solde Net Caisse (Espèces)</div>
-                                    <div class="kpi-value" t-attf-style="color: #{'#0f766e' if data['summary']['net_cashbox'] >= 0 else '#991b1b'};">
+                                <td style="width: 25%; background-color: #ecfdf5; border: 1.5px solid #166534;" class="kpi-card">
+                                    <div class="kpi-title" style="color: #166534;">Solde Net Caisse (Espèces)</div>
+                                    <div class="kpi-value" t-attf-style="color: #{'#166534' if data['summary']['net_cashbox'] >= 0 else '#991b1b'};">
                                         <t t-esc="data['summary']['net_cashbox']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                     </div>
-                                    <div style="font-size: 7.5pt; color: #0f766e;">
+                                    <div style="font-size: 7.5pt; color: #166534;">
                                         Tiroir-Caisse Théorique
                                     </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- 2.b BLOCS RÉSUMÉ DES VENTES & VENTILATION DES RÈGLEMENTS (Côte à côte) -->
+                        <table style="width: 100%; border-collapse: separate; border-spacing: 8px 0; margin-bottom: 12px;">
+                            <tr>
+                                <!-- Colonne Gauche : Résumé des Ventes -->
+                                <td style="width: 50%; vertical-align: top; border: none; padding: 0;">
+                                    <div style="background-color: #543216; color: #ffffff; padding: 5px 9px; font-weight: 900; font-size: 9.5pt; border-radius: 4px 4px 0 0; text-transform: uppercase; letter-spacing: 0.4px;">
+                                        RÉSUMÉ DES VENTES
+                                    </div>
+                                    <table class="data-table" style="margin-bottom: 0;">
+                                        <tbody>
+                                            <tr>
+                                                <td style="width: 62%; font-weight: 700; color: #2c1810;">Nombre de factures émises</td>
+                                                <td style="width: 38%; text-align: right; font-weight: 800; font-size: 9.5pt;"><t t-esc="data['summary']['invoice_count']"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td style="font-weight: 700; color: #2c1810;">Nombre d'avoirs émis</td>
+                                                <td style="text-align: right; font-weight: 800; font-size: 9.5pt;"><t t-esc="data['summary']['refund_count']"/></td>
+                                            </tr>
+                                            <tr style="background-color: #f5ede3; border-top: 1.5px solid #bfa084; border-bottom: 1.5px solid #bfa084;">
+                                                <td style="font-weight: 900; color: #2c1810; font-size: 9pt; text-transform: uppercase;">TOTAL VENTES (TTC)</td>
+                                                <td style="text-align: right; font-weight: 900; color: #2c1810; font-size: 10pt; white-space: nowrap;">
+                                                    <t t-esc="data['summary']['sales_net']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                                </td>
+                                            </tr>
+                                            <tr style="background-color: #faf6f0;">
+                                                <td style="font-weight: 800; color: #2c1810; font-size: 8.5pt;">Dont Ventes Réglées (du jour)</td>
+                                                <td style="text-align: right; font-weight: 800; color: #2c1810; font-size: 9.5pt; white-space: nowrap;">
+                                                    <t t-esc="data['summary']['sales_paid']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                                </td>
+                                            </tr>
+                                            <tr t-attf-style="background-color: #{data['summary']['sales_residual'] > 0 and '#fee2e2' or '#ffffff'};">
+                                                <td style="font-weight: 800; color: #2c1810; font-size: 8.5pt;">Dont Ventes Non Soldées (Reste dû)</td>
+                                                <td style="text-align: right; font-weight: 800; color: #2c1810; font-size: 9.5pt; white-space: nowrap;">
+                                                    <t t-esc="data['summary']['sales_residual']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                                </td>
+                                            </tr>
+                                            <tr t-if="data['summary'].get('prior_payments_total', 0) > 0.005" style="background-color: #faf6f0; border-top: 1px dashed #d7c4b1;">
+                                                <td style="font-weight: 800; color: #2c1810; font-size: 8.5pt;">
+                                                    + Encaissements Créances Antérieures
+                                                    <div t-if="data.get('prior_payments_summary')" style="font-size: 7.5pt; font-weight: 600; color: #854d0e; margin-top: 1px;">
+                                                        <t t-foreach="data['prior_payments_summary']" t-as="ps">
+                                                            <span style="margin-right: 6px;">• <t t-esc="ps['mode']"/>: <strong t-esc="ps['amount']" t-options='{"widget": "monetary", "display_currency": currency}'/></span>
+                                                        </t>
+                                                    </div>
+                                                </td>
+                                                <td style="text-align: right; font-weight: 900; color: #2c1810; font-size: 9.5pt; white-space: nowrap; vertical-align: top;">
+                                                    <t t-esc="data['summary']['prior_payments_total']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                                </td>
+                                            </tr>
+                                            <tr style="background-color: #ecfdf5; border-top: 2px solid #86efac;">
+                                                <td style="font-weight: 900; color: #2c1810; font-size: 9pt; text-transform: uppercase;">TOTAL GÉNÉRAL ENCAISSÉ</td>
+                                                <td style="text-align: right; font-weight: 900; color: #2c1810; font-size: 10pt; white-space: nowrap;">
+                                                    <t t-esc="data['treasury_totals']['in']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+
+                                <!-- Colonne Droite : Ventilation des Règlements -->
+                                <td style="width: 50%; vertical-align: top; border: none; padding: 0;">
+                                    <div style="background-color: #543216; color: #ffffff; padding: 5px 9px; font-weight: 900; font-size: 9.5pt; border-radius: 4px 4px 0 0; text-transform: uppercase; letter-spacing: 0.4px;">
+                                        VENTILATION DES RÈGLEMENTS
+                                    </div>
+                                    <table class="data-table" style="margin-bottom: 0;">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 44%; text-align: left; background-color: #78350f !important; color: #ffffff !important; border: 1px solid #543216 !important; font-size: 8.5pt; padding: 5px 7px !important; text-transform: uppercase;">Mode de règlement</th>
+                                                <th style="width: 18%; text-align: center; background-color: #78350f !important; color: #ffffff !important; border: 1px solid #543216 !important; font-size: 8.5pt; padding: 5px 5px !important; text-transform: uppercase;">Nb</th>
+                                                <th style="width: 38%; text-align: right; background-color: #78350f !important; color: #ffffff !important; border: 1px solid #543216 !important; font-size: 8.5pt; padding: 5px 7px !important; text-transform: uppercase;">Total encaissé</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-if="data.get('payments')">
+                                                <t t-foreach="data['payments']" t-as="p">
+                                                    <tr t-if="abs(p['amount']) > 0.005">
+                                                        <td style="vertical-align: middle;">
+                                                            <span t-attf-class="badge #{'badge-especes' if p['mode'] == 'Espèces' else ('badge-virement' if p['mode'] == 'Virement' else ('badge-cheque' if p['mode'] == 'Chèque' else ('badge-effet' if p['mode'] == 'Effet' else 'badge-autre')))}">
+                                                                <t t-esc="p['mode']"/>
+                                                            </span>
+                                                        </td>
+                                                        <td style="text-align: center; vertical-align: middle; font-weight: 800; color: #2c1810; font-size: 9pt;">
+                                                            <t t-esc="p['count']"/>
+                                                        </td>
+                                                        <td style="text-align: right; vertical-align: middle; font-weight: 800; font-size: 9pt; color: #2c1810; white-space: nowrap;">
+                                                            <t t-esc="p['amount']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </t>
+                                            <tr t-if="not data.get('payments') or sum([p['amount'] for p in data.get('payments', [])]) == 0">
+                                                <td colspan="3" style="text-align: center; color: #7c6a59; font-style: italic; font-weight: 600; padding: 8px;">
+                                                    Aucun encaissement enregistré sur la période
+                                                </td>
+                                            </tr>
+                                            <tr style="background-color: #faf6f0; border-top: 2px solid #bfa084;">
+                                                <td style="font-weight: 900; color: #2c1810; font-size: 9pt; text-transform: uppercase;">TOTAL ENCAISSÉ</td>
+                                                <td style="text-align: center; font-weight: 900; color: #2c1810; font-size: 9.5pt;">
+                                                    <t t-esc="sum([p['count'] for p in data.get('payments', [])])"/>
+                                                </td>
+                                                <td style="text-align: right; font-weight: 900; color: #2c1810; font-size: 9.5pt; white-space: nowrap;">
+                                                    <t t-esc="sum([p['amount'] for p in data.get('payments', [])])" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </td>
                             </tr>
                         </table>
@@ -201,10 +312,10 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 40%;">Mode de Règlement</th>
+                                    <th style="width: 40%; color: #4a2c11;">Mode de Règlement</th>
                                     <th style="width: 20%; text-align: right; color: #166534;">Entrées (Encaissements)</th>
                                     <th style="width: 20%; text-align: right; color: #991b1b;">Sorties (Décaissements)</th>
-                                    <th style="width: 20%; text-align: right; color: #1e3a8a;">Solde Net</th>
+                                    <th style="width: 20%; text-align: right; color: #543216;">Solde Net</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -221,22 +332,53 @@
                                         <td style="text-align: right; font-weight: 700; color: #991b1b;">
                                             <t t-esc="tr['out']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                         </td>
-                                        <td style="text-align: right; font-weight: 800;" t-attf-style="color: #{'#166534' if tr['net'] >= 0 else '#991b1b'};">
+                                        <td t-attf-style="text-align: right; font-weight: 800; color: #{'#166534' if tr['net'] >= 0 else '#991b1b'};">
                                             <t t-esc="tr['net']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                         </td>
                                     </tr>
                                 </t>
                             </tbody>
                             <tfoot>
-                                <tr class="total-row" style="background-color: #f1f5f9;">
-                                    <td style="text-align: right; text-transform: uppercase;">Total Général Trésorerie :</td>
+                                <tr t-if="data['summary'].get('prior_payments_total', 0) > 0.005" style="background-color: #faf6f0; border-top: 1.5px solid #bfa084;">
+                                    <td style="text-align: right; text-transform: uppercase; font-weight: 800; color: #543216;">Trésorerie Ventes de la Période (Hors Créances Recouvrées) :</td>
                                     <td style="text-align: right; color: #166534; font-weight: 800;">
-                                        <t t-esc="data['treasury_totals']['in']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                        <t t-esc="data['treasury_totals']['in'] - data['summary'].get('prior_payments_total', 0.0)" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                     </td>
                                     <td style="text-align: right; color: #991b1b; font-weight: 800;">
                                         <t t-esc="data['treasury_totals']['out']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                     </td>
-                                    <td style="text-align: right; font-weight: 800;" t-attf-style="color: #{'#166534' if data['treasury_totals']['net'] >= 0 else '#991b1b'};">
+                                    <td t-attf-style="text-align: right; font-weight: 800; color: #{'#166534' if (data['treasury_totals']['net'] - data['summary'].get('prior_payments_total', 0.0)) >= 0 else '#991b1b'};">
+                                        <t t-esc="data['treasury_totals']['net'] - data['summary'].get('prior_payments_total', 0.0)" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                </tr>
+                                <tr t-if="data['summary'].get('prior_payments_total', 0) > 0.005" style="background-color: #fef3c7; border-top: 1px dashed #fcd34d;">
+                                    <td style="text-align: right; text-transform: uppercase; font-weight: 800; color: #78350f;">
+                                        + Encaissements sur Factures Antérieures (Créances Recouvrées) :
+                                        <div t-if="data.get('prior_payments_summary')" style="font-size: 7.5pt; font-weight: 600; color: #854d0e; margin-top: 1px; text-transform: none;">
+                                            <t t-foreach="data['prior_payments_summary']" t-as="ps">
+                                                <span style="margin-left: 8px;">• <t t-esc="ps['mode']"/>: <strong t-esc="ps['amount']" t-options='{"widget": "monetary", "display_currency": currency}'/></span>
+                                            </t>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: right; font-weight: 900; color: #78350f;">
+                                        +<t t-esc="data['summary']['prior_payments_total']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                    <td style="text-align: right; font-weight: 700; color: #78350f;">
+                                        <t t-esc="0.0" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                    <td style="text-align: right; font-weight: 900; color: #78350f;">
+                                        +<t t-esc="data['summary']['prior_payments_total']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                </tr>
+                                <tr class="total-row" style="background-color: #ecfdf5; border-top: 2px solid #166534;">
+                                    <td style="text-align: right; text-transform: uppercase; color: #166534; font-weight: 900;">Total Général Trésorerie + Encaissements Factures Recouvrées :</td>
+                                    <td style="text-align: right; color: #166534; font-weight: 900; font-size: 9.5pt;">
+                                        <t t-esc="data['treasury_totals']['in']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                    <td style="text-align: right; color: #991b1b; font-weight: 900; font-size: 9.5pt;">
+                                        <t t-esc="data['treasury_totals']['out']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                    <td t-attf-style="text-align: right; font-weight: 900; font-size: 9.5pt; color: #{'#166534' if data['treasury_totals']['net'] >= 0 else '#991b1b'};">
                                         <t t-esc="data['treasury_totals']['net']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                     </td>
                                 </tr>
@@ -251,75 +393,222 @@
                             </tfoot>
                         </table>
 
-                        <!-- 4. DÉTAIL DES VENTES JOURNALIÈRES -->
-                        <div class="section-title section-title-green">
+                        <!-- 3.b DÉTAIL DES CHÈQUES & EFFETS ENCAISSÉS (Noyer & Ambre) -->
+                        <div class="section-title" style="background-color: #78350f;" t-if="data.get('cheques')">
+                            Détail des Chèques &amp; Effets Encaissés (<t t-esc="len(data['cheques'])"/>)
+                        </div>
+                        <table class="data-table" t-if="data.get('cheques')">
+                            <thead>
+                                <tr style="background-color: #f5ede3;">
+                                    <th style="width: 10%; text-align: center; white-space: nowrap; color: #4a2c11;">Date</th>
+                                    <th style="width: 16%; white-space: nowrap; color: #4a2c11;">Facture</th>
+                                    <th style="width: 18%; color: #4a2c11;">Client</th>
+                                    <th style="width: 18%; color: #4a2c11;">Porteur / Tireur</th>
+                                    <th style="width: 14%; text-align: center; white-space: nowrap; color: #4a2c11;">N° de Série</th>
+                                    <th style="width: 11%; text-align: center; white-space: nowrap; color: #4a2c11;">Échéance</th>
+                                    <th style="width: 13%; text-align: right; white-space: nowrap; color: #4a2c11;">Montant</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="data['cheques']" t-as="chk">
+                                    <tr>
+                                        <td style="text-align: center; font-size: 8.5pt; white-space: nowrap;">
+                                            <span t-esc="chk['date']" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/>
+                                        </td>
+                                        <td style="font-weight: 700; color: #543216; font-size: 8.5pt; white-space: nowrap;">
+                                            <t t-esc="chk['invoice_name']"/>
+                                        </td>
+                                        <td style="font-weight: 600; font-size: 8.5pt; word-break: break-word; color: #2c1810;">
+                                            <t t-esc="chk['partner']"/>
+                                        </td>
+                                        <td style="font-weight: 700; color: #78350f; font-size: 8.5pt; word-break: break-word;">
+                                            <t t-esc="chk['check_client_name']"/>
+                                        </td>
+                                        <td style="text-align: center; font-weight: 700; font-size: 8.5pt; color: #2c1810;">
+                                            <span t-attf-class="badge #{'badge-cheque' if chk['mode'] == 'Chèque' else 'badge-effet'}" style="margin-right: 4px;">
+                                                <t t-esc="chk['mode']"/>
+                                            </span>
+                                            <t t-esc="chk['check_number']"/>
+                                        </td>
+                                        <td style="text-align: center; font-size: 8.5pt; font-weight: 600; color: #6b5744; white-space: nowrap;">
+                                            <t t-esc="chk['check_date_due']"/>
+                                        </td>
+                                        <td style="text-align: right; font-weight: 800; color: #166534; font-size: 8.5pt; white-space: nowrap;">
+                                            <t t-esc="chk['amount']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                            <tfoot>
+                                <tr class="total-row" style="background-color: #faf6f0;">
+                                    <td colspan="6" style="text-align: right; font-weight: 800; font-size: 9pt; color: #78350f; text-transform: uppercase;">
+                                        Total Chèques &amp; Effets :
+                                    </td>
+                                    <td style="text-align: right; font-weight: 800; font-size: 9.5pt; color: #166534; white-space: nowrap;">
+                                        <t t-esc="data.get('cheques_global_amount', 0.0)" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <!-- 3.c DÉTAIL DES RÈGLEMENTS DE FACTURES ANTÉRIEURES (Chêne Doré & Caramel) -->
+                        <div class="section-title" style="background-color: #854d0e;" t-if="data.get('prior_payments')">
+                            Détail des Règlements de Factures Antérieures (<t t-esc="len(data['prior_payments'])"/>)
+                        </div>
+                        <table class="data-table" t-if="data.get('prior_payments')">
+                            <thead>
+                                <tr style="background-color: #f5ede3;">
+                                    <th style="width: 10%; text-align: center; white-space: nowrap; color: #4a2c11;">Date Règlt</th>
+                                    <th style="width: 16%; white-space: nowrap; color: #4a2c11;">Facture</th>
+                                    <th style="width: 10%; text-align: center; white-space: nowrap; color: #4a2c11;">Date Facture</th>
+                                    <th style="width: 22%; color: #4a2c11;">Client</th>
+                                    <th style="width: 22%; text-align: center; color: #4a2c11;">Mode &amp; Réf</th>
+                                    <th style="width: 20%; text-align: right; white-space: nowrap; color: #4a2c11;">Montant Encaissé</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="data['prior_payments']" t-as="pp">
+                                    <tr>
+                                        <td style="text-align: center; font-size: 8.5pt; font-weight: 700; color: #854d0e; white-space: nowrap;">
+                                            <span t-esc="pp['payment_date']" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/>
+                                        </td>
+                                        <td style="font-weight: 700; color: #543216; font-size: 8.5pt; white-space: nowrap;">
+                                            <t t-esc="pp['invoice_name']"/>
+                                        </td>
+                                        <td style="text-align: center; font-size: 8.5pt; color: #6b5744; white-space: nowrap;">
+                                            <t t-if="pp.get('invoice_date')">
+                                                <span t-esc="pp['invoice_date']" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/>
+                                            </t>
+                                            <t t-else="">-</t>
+                                        </td>
+                                        <td style="font-weight: 600; font-size: 8.5pt; word-break: break-word; color: #2c1810;">
+                                            <t t-esc="pp['partner']"/>
+                                        </td>
+                                        <td style="text-align: center; padding: 3px 2px;">
+                                            <span t-attf-class="badge #{'badge-especes' if pp['mode'] == 'Espèces' else ('badge-virement' if pp['mode'] == 'Virement' else ('badge-cheque' if pp['mode'] == 'Chèque' else ('badge-effet' if pp['mode'] == 'Effet' else 'badge-autre')))}">
+                                                <t t-esc="pp['mode']"/>
+                                            </span>
+                                            <div t-if="pp.get('check_number')" style="font-size: 7.5pt; color: #2c1810; margin-top: 1px;">
+                                                N°: <strong t-esc="pp['check_number']"/>
+                                            </div>
+                                        </td>
+                                        <td style="text-align: right; font-weight: 800; color: #166534; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px;">
+                                            <t t-esc="pp['amount']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                            <tfoot>
+                                <t t-foreach="data.get('prior_payments_summary', [])" t-as="ps">
+                                    <tr style="background-color: #faf6f0; border-top: 1px solid #e7ded4;">
+                                        <td colspan="5" style="text-align: right; font-weight: 700; font-size: 8.5pt; color: #543216; padding: 4px 6px;">
+                                            <span t-attf-class="badge #{'badge-especes' if ps['mode'] == 'Espèces' else ('badge-virement' if ps['mode'] == 'Virement' else ('badge-cheque' if ps['mode'] == 'Chèque' else ('badge-effet' if ps['mode'] == 'Effet' else 'badge-autre')))}" style="margin-right: 5px;">
+                                                <t t-esc="ps['mode'].upper()"/>
+                                            </span>
+                                            TOTAL <t t-esc="ps['mode'].upper()"/> (FACTURES ANTÉRIEURES) :
+                                        </td>
+                                        <td style="text-align: right; font-weight: 800; font-size: 8.5pt; color: #166534; white-space: nowrap; padding: 4px 3px;">
+                                            <t t-esc="ps['amount']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                        </td>
+                                    </tr>
+                                </t>
+                                <tr class="total-row" style="background-color: #f5ede3; border-top: 2px solid #854d0e;">
+                                    <td colspan="5" style="text-align: right; text-transform: uppercase; font-size: 8.5pt; color: #854d0e; font-weight: 800; padding: 5px 6px;">
+                                        TOTAL ENCAISSEMENTS FACTURES ANTÉRIEURES :
+                                    </td>
+                                    <td style="text-align: right; font-weight: 900; font-size: 9pt; color: #166534; white-space: nowrap; padding: 5px 3px;">
+                                        <t t-esc="data.get('prior_payments_total', 0.0)" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <!-- 4. DÉTAIL DES VENTES JOURNALIÈRES (Noyer Noble) -->
+                        <div class="section-title">
                             Détail des Factures de Vente Clients (<t t-esc="len(data['invoices'])"/>)
                         </div>
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 11%; text-align: center; white-space: nowrap;">Date</th>
-                                    <th style="width: 19%; white-space: nowrap;">Facture</th>
-                                    <th style="width: 20%;">Client</th>
-                                    <th style="width: 13%; text-align: center;">Règlement &amp; Réf</th>
-                                    <th style="width: 13%; text-align: right; white-space: nowrap;">Total TTC</th>
-                                    <th style="width: 13%; text-align: right; white-space: nowrap;">Payé</th>
-                                    <th style="width: 11%; text-align: center; white-space: nowrap;">Statut</th>
+                                    <th style="width: 8%; text-align: center; white-space: nowrap;">Date</th>
+                                    <th style="width: 14%; white-space: nowrap;">Facture</th>
+                                    <th style="width: 17%;">Client</th>
+                                    <th style="width: 9%; text-align: center;">Règlement &amp; Réf</th>
+                                    <th style="width: 17%; text-align: right; white-space: nowrap;">Total TTC</th>
+                                    <th style="width: 17%; text-align: right; white-space: nowrap;">Payé</th>
+                                    <th style="width: 18%; text-align: center; white-space: nowrap;">Statut</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <t t-if="not data['invoices']">
-                                    <tr><td colspan="7" style="text-align: center; color: #64748b; padding: 8px;">Aucune facture de vente sur cette période.</td></tr>
+                                    <tr><td colspan="7" style="text-align: center; color: #7c6a59; padding: 8px;">Aucune facture de vente sur cette période.</td></tr>
                                 </t>
                                 <t t-foreach="data['invoices']" t-as="inv">
                                     <tr>
                                         <td style="text-align: center; font-size: 8.5pt; white-space: nowrap;"><span t-esc="inv['date']" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/></td>
-                                        <td style="font-weight: 700; color: #1e3a8a; font-size: 8.5pt; white-space: nowrap;"><t t-esc="inv['name']"/></td>
-                                        <td style="font-weight: 600; font-size: 8.5pt; word-break: break-word;"><t t-esc="inv['partner']"/></td>
+                                        <td style="font-weight: 700; color: #543216; font-size: 8.5pt; white-space: nowrap;"><t t-esc="inv['name']"/></td>
+                                        <td style="font-weight: 600; font-size: 8.5pt; word-break: break-word; color: #2c1810;"><t t-esc="inv['partner']"/></td>
                                         <td style="text-align: center; padding: 3px 2px;">
                                             <span t-attf-class="badge #{'badge-especes' if inv['payment_mode'] == 'Espèces' else ('badge-virement' if inv['payment_mode'] == 'Virement' else ('badge-cheque' if inv['payment_mode'] == 'Chèque' else ('badge-effet' if inv['payment_mode'] == 'Effet' else 'badge-autre')))}">
                                                 <t t-esc="inv['payment_mode']"/>
                                             </span>
-                                            <div t-if="inv['check_number']" style="font-size: 7.5pt; color: #475569; margin-top: 1px;">
-                                                N°: <strong t-esc="inv['check_number']"/>
-                                            </div>
-                                            <div t-if="inv['check_client_name'] and inv['check_client_name'] != inv['partner']" style="font-size: 7.5pt; color: #475569;">
-                                                Tireur: <span t-esc="inv['check_client_name']"/>
-                                            </div>
-                                            <div t-if="inv.get('check_date_due')" style="font-size: 7.5pt; color: #475569;">
-                                                Éch: <span t-esc="inv['check_date_due']"/>
-                                            </div>
+                                            <t t-if="inv['payment_mode'] in ('Chèque', 'Effet')">
+                                                <div t-if="inv.get('check_number')" style="font-size: 7.5pt; color: #2c1810; margin-top: 1px;">
+                                                    N°: <strong t-esc="inv['check_number']"/>
+                                                </div>
+                                                <div t-if="inv.get('check_client_name') and inv['check_client_name'] != inv['partner']" style="font-size: 7.5pt; color: #{'#78350f' if inv['payment_mode'] == 'Chèque' else '#854d0e'};">
+                                                    Tireur: <span t-esc="inv['check_client_name']"/>
+                                                </div>
+                                                <div t-if="inv.get('check_date_due')" style="font-size: 7.5pt; color: #6b5744;">
+                                                    Éch: <span t-esc="inv['check_date_due']"/>
+                                                </div>
+                                            </t>
                                         </td>
-                                        <td style="text-align: right; font-weight: 700; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px;">
+                                        <td style="text-align: right; font-weight: 700; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px; color: #543216;">
                                             <t t-esc="inv['total_ttc']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                         </td>
                                         <td style="text-align: right; font-weight: 700; color: #166534; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px;">
                                             <t t-esc="inv['paid']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                         </td>
                                         <td style="text-align: center; padding: 3px 2px;">
-                                            <span t-attf-class="badge #{'badge-paid' if inv['payment_state'] == 'Payé' else ('badge-partial' if inv['payment_state'] == 'Partiel' else 'badge-notpaid')}">
-                                                <t t-esc="inv['payment_state']"/>
-                                            </span>
+                                            <t t-if="inv['payment_state'] in ('Payé', 'paid', 'in_payment')">
+                                                <span class="badge badge-paid">Payé</span>
+                                                <div t-if="inv.get('payment_date')" style="font-size: 7.5pt; color: #15803d; font-weight: 700; margin-top: 1px;">
+                                                    le <t t-esc="inv['payment_date']"/>
+                                                </div>
+                                            </t>
+                                            <t t-elif="inv['payment_state'] in ('Partiel', 'partial')">
+                                                <span class="badge badge-partial">Partiel</span>
+                                                <div t-if="inv.get('payment_date')" style="font-size: 7.5pt; color: #b45309; font-weight: 700; margin-top: 1px;">
+                                                    le <t t-esc="inv['payment_date']"/>
+                                                </div>
+                                                <div t-if="abs(inv.get('residual', 0)) > 0.005" style="font-size: 7pt; color: #b91c1c; font-weight: 800; margin-top: 1px;">
+                                                    Reste: <t t-esc="inv['residual']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                                </div>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="badge badge-notpaid">Non payé</span>
+                                            </t>
                                         </td>
                                     </tr>
                                 </t>
                             </tbody>
                             <tfoot>
-                                <tr class="total-row" style="background-color: #dcfce7; color: #166534;">
-                                    <td colspan="4" style="text-align: right; text-transform: uppercase; font-size: 9pt; padding: 5px 6px;">Total Ventes Facturées :</td>
-                                    <td style="text-align: right; font-weight: 800; font-size: 9pt; white-space: nowrap; padding: 5px 3px;">
+                                <tr class="total-row" style="background-color: #f5ede3; font-weight: 900; border-top: 2.5px solid #543216;">
+                                    <td colspan="4" style="text-align: right; text-transform: uppercase; font-size: 8.5pt; color: #543216; padding: 6px 6px !important; letter-spacing: 0.2px;">Total Ventes Facturées :</td>
+                                    <td style="text-align: right; font-weight: 900; font-size: 8pt; color: #543216; white-space: nowrap; padding: 6px 4px !important;">
                                         <t t-esc="data['summary']['sales_gross']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                     </td>
-                                    <td style="text-align: right; font-weight: 800; font-size: 9pt; white-space: nowrap; padding: 5px 3px;">
+                                    <td style="text-align: right; font-weight: 900; font-size: 8pt; color: #15803d; white-space: nowrap; padding: 6px 4px !important;">
                                         <t t-esc="data['summary']['sales_paid']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                     </td>
-                                    <td style="text-align: center; color: #991b1b; font-weight: 800; font-size: 8pt; padding: 4px 2px;">
+                                    <td style="text-align: center; vertical-align: middle; padding: 4px 2px !important;">
                                         <t t-if="data['summary']['sales_residual'] > 0.005">
-                                            <div style="font-size: 7pt; text-transform: uppercase;">Impayé :</div>
-                                            <div style="white-space: nowrap;"><t t-esc="data['summary']['sales_residual']" t-options='{"widget": "monetary", "display_currency": currency}'/></div>
+                                            <span style="font-size: 7.5pt; color: #b91c1c; font-weight: 800; text-transform: uppercase;">Impayé : </span>
+                                            <span style="font-size: 8pt; color: #b91c1c; font-weight: 900; white-space: nowrap;"><t t-esc="data['summary']['sales_residual']" t-options='{"widget": "monetary", "display_currency": currency}'/></span>
                                         </t>
                                         <t t-else="">
-                                            <span style="color: #166534;">Soldé</span>
+                                            <span style="color: #15803d; font-size: 8.5pt; font-weight: 900;">Soldé</span>
                                         </t>
                                     </td>
                                 </tr>
@@ -328,27 +617,27 @@
 
                         <!-- AVOIRS CLIENTS (si présents) -->
                         <t t-if="data['refunds']">
-                            <div class="section-title" style="background-color: #991b1b;">
+                            <div class="section-title section-title-red">
                                 Avoirs Émis aux Clients (<t t-esc="len(data['refunds'])"/>)
                             </div>
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 10%; text-align: center;">Date</th>
-                                        <th style="width: 15%;">Avoir</th>
-                                        <th style="width: 35%;">Client</th>
-                                        <th style="width: 20%;">Mode Règlement</th>
-                                        <th style="width: 20%; text-align: right;">Montant TTC</th>
+                                        <th style="width: 10%; text-align: center; color: #4a2c11;">Date</th>
+                                        <th style="width: 15%; color: #4a2c11;">Avoir</th>
+                                        <th style="width: 35%; color: #4a2c11;">Client</th>
+                                        <th style="width: 20%; color: #4a2c11;">Mode Règlement</th>
+                                        <th style="width: 20%; text-align: right; color: #4a2c11;">Montant TTC</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <t t-foreach="data['refunds']" t-as="ref">
                                         <tr>
                                             <td style="text-align: center;"><span t-esc="ref['date']" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/></td>
-                                            <td style="font-weight: 700; color: #991b1b;"><t t-esc="ref['name']"/></td>
-                                            <td><t t-esc="ref['partner']"/></td>
+                                            <td style="font-weight: 700; color: #7f1d1d;"><t t-esc="ref['name']"/></td>
+                                            <td style="color: #2c1810;"><t t-esc="ref['partner']"/></td>
                                             <td><t t-esc="ref['payment_mode']"/></td>
-                                            <td style="text-align: right; font-weight: 700; color: #991b1b;">
+                                            <td style="text-align: right; font-weight: 700; color: #7f1d1d;">
                                                 -<t t-esc="ref['total_ttc']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                             </td>
                                         </tr>
@@ -357,42 +646,42 @@
                             </table>
                         </t>
 
-                        <!-- 5. DÉTAIL DES NOTES DE FRAIS & SALAIRES JOURNALIERS (HR EXPENSES) -->
+                        <!-- 5. DÉTAIL DES NOTES DE FRAIS & SALAIRES JOURNALIERS (HR EXPENSES - Chêne Doré & Caramel) -->
                         <div class="section-title section-title-amber" style="page-break-before: auto;">
                             Détail des Dépenses, Notes de Frais &amp; Salaires Journaliers (<t t-esc="len(data['hr_expenses'])"/>)
                         </div>
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 10%; text-align: center;">Date</th>
-                                    <th style="width: 30%;">Description / Motif / Bénéficiaire</th>
-                                    <th style="width: 16%;">Catégorie</th>
-                                    <th style="width: 16%;">Employé</th>
-                                    <th style="width: 12%; text-align: center;">Payé par</th>
-                                    <th style="width: 16%; text-align: right;">Montant TTC</th>
+                                    <th style="width: 10%; text-align: center; color: #4a2c11;">Date</th>
+                                    <th style="width: 30%; color: #4a2c11;">Description / Motif / Bénéficiaire</th>
+                                    <th style="width: 16%; color: #4a2c11;">Catégorie</th>
+                                    <th style="width: 16%; color: #4a2c11;">Employé</th>
+                                    <th style="width: 12%; text-align: center; color: #4a2c11;">Payé par</th>
+                                    <th style="width: 16%; text-align: right; color: #4a2c11;">Montant TTC</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <t t-if="not data['hr_expenses']">
-                                    <tr><td colspan="6" style="text-align: center; color: #64748b; padding: 8px;">Aucune note de frais ou salaire journalier enregistré sur cette période.</td></tr>
+                                    <tr><td colspan="6" style="text-align: center; color: #7c6a59; padding: 8px;">Aucune note de frais ou salaire journalier enregistré sur cette période.</td></tr>
                                 </t>
                                 <t t-foreach="data['hr_expenses']" t-as="he">
                                     <tr>
                                         <td style="text-align: center;"><span t-esc="he['date']" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/></td>
-                                        <td style="font-weight: 700; color: #9a3412;"><t t-esc="he['name']"/></td>
-                                        <td><span class="badge" style="background-color: #ffedd5; color: #9a3412; border: 1px solid #fed7aa;"><t t-esc="he['category']"/></span></td>
-                                        <td style="color: #475569;"><t t-esc="he['employee']"/></td>
+                                        <td style="font-weight: 700; color: #78350f;"><t t-esc="he['name']"/></td>
+                                        <td><span class="badge" style="background-color: #fef3c7; color: #78350f; border: 1px solid #fcd34d;"><t t-esc="he['category']"/></span></td>
+                                        <td style="color: #44352b;"><t t-esc="he['employee']"/></td>
                                         <td style="text-align: center;">
                                             <span class="badge badge-especes"><t t-esc="he['payment_mode']"/></span>
                                         </td>
-                                        <td style="text-align: right; font-weight: 800; color: #991b1b;">
+                                        <td style="text-align: right; font-weight: 800; color: #7f1d1d;">
                                             <t t-esc="he['amount']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                         </td>
                                     </tr>
                                 </t>
                             </tbody>
                             <tfoot>
-                                <tr class="total-row" style="background-color: #fef3c7; color: #b45309;">
+                                <tr class="total-row" style="background-color: #faf6f0; color: #78350f;">
                                     <td colspan="5" style="text-align: right; text-transform: uppercase;">Total Dépenses RH &amp; Salaires :</td>
                                     <td style="text-align: right; font-weight: 900;">
                                         <t t-esc="data['summary']['hr_expenses_total']" t-options='{"widget": "monetary", "display_currency": currency}'/>
@@ -409,29 +698,29 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 11%; text-align: center; white-space: nowrap;">Date</th>
-                                        <th style="width: 19%; white-space: nowrap;">N° Pièce</th>
-                                        <th style="width: 20%;">Fournisseur / Bénéficiaire</th>
-                                        <th style="width: 13%;">Description / Motif</th>
-                                        <th style="width: 13%; text-align: right; white-space: nowrap;">Total TTC</th>
-                                        <th style="width: 13%; text-align: right; white-space: nowrap;">Payé</th>
-                                        <th style="width: 11%; text-align: center; white-space: nowrap;">Statut</th>
+                                        <th style="width: 11%; text-align: center; white-space: nowrap; color: #4a2c11;">Date</th>
+                                        <th style="width: 19%; white-space: nowrap; color: #4a2c11;">N° Pièce</th>
+                                        <th style="width: 20%; color: #4a2c11;">Fournisseur / Bénéficiaire</th>
+                                        <th style="width: 13%; color: #4a2c11;">Description / Motif</th>
+                                        <th style="width: 13%; text-align: right; white-space: nowrap; color: #4a2c11;">Total TTC</th>
+                                        <th style="width: 13%; text-align: right; white-space: nowrap; color: #4a2c11;">Payé</th>
+                                        <th style="width: 11%; text-align: center; white-space: nowrap; color: #4a2c11;">Statut</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <t t-foreach="data['vendor_bills']" t-as="vb">
                                         <tr>
                                             <td style="text-align: center; font-size: 8.5pt; white-space: nowrap;"><span t-esc="vb['date']" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/></td>
-                                            <td style="font-weight: 700; color: #991b1b; font-size: 8.5pt; white-space: nowrap;">
+                                            <td style="font-weight: 700; color: #7f1d1d; font-size: 8.5pt; white-space: nowrap;">
                                                 <t t-esc="vb['name']"/>
-                                                <div t-if="vb['ref']" style="font-size: 7.5pt; color: #64748b;">Réf: <t t-esc="vb['ref']"/></div>
+                                                <div t-if="vb['ref']" style="font-size: 7.5pt; color: #6b5744;">Réf: <t t-esc="vb['ref']"/></div>
                                             </td>
-                                            <td style="font-weight: 600; font-size: 8.5pt; word-break: break-word;"><t t-esc="vb['partner']"/></td>
-                                            <td style="font-size: 8pt; color: #475569;"><t t-esc="vb.get('description', '-')"/></td>
-                                            <td style="text-align: right; font-weight: 700; color: #991b1b; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px;">
+                                            <td style="font-weight: 600; font-size: 8.5pt; word-break: break-word; color: #2c1810;"><t t-esc="vb['partner']"/></td>
+                                            <td style="font-size: 8pt; color: #57463a;"><t t-esc="vb.get('description', '-')"/></td>
+                                            <td style="text-align: right; font-weight: 700; color: #7f1d1d; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px;">
                                                 <t t-esc="vb['total_ttc']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                             </td>
-                                            <td style="text-align: right; font-weight: 700; color: #991b1b; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px;">
+                                            <td style="text-align: right; font-weight: 700; color: #7f1d1d; font-size: 8.5pt; white-space: nowrap; padding: 4px 3px;">
                                                 <t t-esc="vb['paid']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                             </td>
                                             <td style="text-align: center; padding: 3px 2px;">
@@ -443,7 +732,7 @@
                                     </t>
                                 </tbody>
                                 <tfoot>
-                                    <tr class="total-row" style="background-color: #fee2e2; color: #991b1b;">
+                                    <tr class="total-row" style="background-color: #fee2e2; color: #7f1d1d;">
                                         <td colspan="4" style="text-align: right; text-transform: uppercase; font-size: 9pt; padding: 5px 6px;">Total Charges Fournisseurs :</td>
                                         <td style="text-align: right; font-weight: 800; font-size: 9pt; white-space: nowrap; padding: 5px 3px;">
                                             <t t-esc="data['summary']['expenses_gross']" t-options='{"widget": "monetary", "display_currency": currency}'/>
@@ -459,34 +748,34 @@
 
                         <!-- 7. DÉPENSES DIRECTES DE CAISSE (Menues dépenses) -->
                         <t t-if="data['direct_expenses']">
-                            <div class="section-title" style="background-color: #b45309;">
+                            <div class="section-title section-title-amber">
                                 Dépenses Directes de Caisse / Menues Dépenses (<t t-esc="len(data['direct_expenses'])"/>)
                             </div>
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 12%; text-align: center;">Date</th>
-                                        <th style="width: 18%;">Pièce / N°</th>
-                                        <th style="width: 25%;">Bénéficiaire</th>
-                                        <th style="width: 30%;">Motif / Justification</th>
-                                        <th style="width: 15%; text-align: right;">Montant Sorti</th>
+                                        <th style="width: 12%; text-align: center; color: #4a2c11;">Date</th>
+                                        <th style="width: 18%; color: #4a2c11;">Pièce / N°</th>
+                                        <th style="width: 25%; color: #4a2c11;">Bénéficiaire</th>
+                                        <th style="width: 30%; color: #4a2c11;">Motif / Justification</th>
+                                        <th style="width: 15%; text-align: right; color: #4a2c11;">Montant Sorti</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <t t-foreach="data['direct_expenses']" t-as="de">
                                         <tr>
                                             <td style="text-align: center;"><span t-esc="de['date']" t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/></td>
-                                            <td style="font-weight: 700;"><t t-esc="de['name']"/></td>
-                                            <td><t t-esc="de['partner']"/></td>
-                                            <td style="font-size: 8.5pt;"><t t-esc="de['memo']"/> (<span t-esc="de['journal']"/>)</td>
-                                            <td style="text-align: right; font-weight: 800; color: #b45309;">
+                                            <td style="font-weight: 700; color: #543216;"><t t-esc="de['name']"/></td>
+                                            <td style="color: #2c1810;"><t t-esc="de['partner']"/></td>
+                                            <td style="font-size: 8.5pt; color: #44352b;"><t t-esc="de['memo']"/> (<span t-esc="de['journal']"/>)</td>
+                                            <td style="text-align: right; font-weight: 800; color: #854d0e;">
                                                 <t t-esc="de['amount']" t-options='{"widget": "monetary", "display_currency": currency}'/>
                                             </td>
                                         </tr>
                                     </t>
                                 </tbody>
                                 <tfoot>
-                                    <tr class="total-row" style="background-color: #fef3c7; color: #b45309;">
+                                    <tr class="total-row" style="background-color: #faf6f0; color: #78350f;">
                                         <td colspan="4" style="text-align: right; text-transform: uppercase;">Total Dépenses Directes de Caisse :</td>
                                         <td style="text-align: right;">
                                             <t t-esc="data['summary']['direct_cash_total']" t-options='{"widget": "monetary", "display_currency": currency}'/>
@@ -499,19 +788,19 @@
                         <!-- 8. CADRE DES VISAS ET SIGNATURES -->
                         <table style="width: 100%; margin-top: 20px; border-collapse: separate; border-spacing: 20px 0; page-break-inside: avoid;">
                             <tr>
-                                <td style="width: 50%; border: 1.5px dashed #cbd5e1; border-radius: 6px; padding: 10px; height: 80px; vertical-align: top;">
-                                    <div style="font-size: 8.5pt; font-weight: 800; color: #475569; text-transform: uppercase;">
+                                <td style="width: 50%; border: 1.5px dashed #bfa084; border-radius: 6px; padding: 10px; height: 80px; vertical-align: top; background-color: #faf6f0;">
+                                    <div style="font-size: 8.5pt; font-weight: 800; color: #543216; text-transform: uppercase;">
                                         Visa &amp; Signature Caissier / Vendeur
                                     </div>
-                                    <div style="font-size: 7.5pt; color: #94a3b8; margin-top: 4px;">
+                                    <div style="font-size: 7.5pt; color: #7c6a59; margin-top: 4px;">
                                         Certifié conforme aux pièces de caisse et aux salaires décaissés
                                     </div>
                                 </td>
-                                <td style="width: 50%; border: 1.5px dashed #cbd5e1; border-radius: 6px; padding: 10px; height: 80px; vertical-align: top;">
-                                    <div style="font-size: 8.5pt; font-weight: 800; color: #1e3a8a; text-transform: uppercase;">
+                                <td style="width: 50%; border: 1.5px dashed #bfa084; border-radius: 6px; padding: 10px; height: 80px; vertical-align: top; background-color: #faf6f0;">
+                                    <div style="font-size: 8.5pt; font-weight: 800; color: #543216; text-transform: uppercase;">
                                         Visa &amp; Approbation Direction / Responsable
                                     </div>
-                                    <div style="font-size: 7.5pt; color: #94a3b8; margin-top: 4px;">
+                                    <div style="font-size: 7.5pt; color: #7c6a59; margin-top: 4px;">
                                         Date &amp; Signature pour validation de clôture journalière
                                     </div>
                                 </td>

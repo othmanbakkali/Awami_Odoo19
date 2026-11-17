@@ -6,24 +6,32 @@ class AccountSalesExpenseReportWizard(models.TransientModel):
     _description = 'Assistant de Génération du Rapport Ventes et Dépenses'
 
     report_type = fields.Selection([
-        ('x', 'Rapport X (Aperçu Provisoire en direct)'),
-        ('z', 'Rapport Z (Clôture Journalière Officielle)')
+        ('x', 'Rapport des Ventes & Dépenses (Aperçu Provisoire)'),
+        ('z', 'Rapport des Ventes & Dépenses (Clôture Journalière)')
     ], string='Type de Rapport', required=True, default='z',
-       help="Rapport X pour consulter l'état en cours de journée sans figer. Rapport Z pour la clôture officielle du soir.")
+       help="Rapport Provisoire pour consulter l'état en cours de journée sans figer. Clôture officielle pour l'arrêté des comptes du soir.")
 
     date_start = fields.Date(string='Date Début', required=True, default=fields.Date.context_today)
     date_end = fields.Date(string='Date Fin', required=True, default=fields.Date.context_today)
     company_id = fields.Many2one('res.company', string='Société', required=True, default=lambda self: self.env.company)
     
-    sale_journal_id = fields.Many2one('account.journal', string='Journal de Vente', domain="[('type', '=', 'sale')]",
+    sale_journal_id = fields.Many2one('account.journal', string='Journal de Vente', domain="[('type', '=', 'sale'), ('company_id', '=', company_id)]",
                                      help="Laisser vide pour inclure tous les journaux de vente.")
-    purchase_journal_id = fields.Many2one('account.journal', string='Journal d\'Achat/Charges', domain="[('type', '=', 'purchase')]",
+    purchase_journal_id = fields.Many2one('account.journal', string='Journal d\'Achat/Charges', domain="[('type', '=', 'purchase'), ('company_id', '=', company_id)]",
                                          help="Laisser vide pour inclure tous les journaux d'achat et de charges.")
     salesperson_id = fields.Many2one('res.users', string='Commercial / Responsable')
     invoice_state = fields.Selection([
         ('posted', 'Factures comptabilisées uniquement'),
         ('paid', 'Factures payées uniquement')
     ], string='Filtrage des pièces', required=True, default='posted')
+
+    @api.onchange('company_id')
+    def _onchange_company_id(self):
+        if self.sale_journal_id and self.sale_journal_id.company_id != self.company_id:
+            self.sale_journal_id = False
+        if self.purchase_journal_id and self.purchase_journal_id.company_id != self.company_id:
+            self.purchase_journal_id = False
+
 
     def action_generate_report(self):
         """Crée l'enregistrement de rapport persistant et ouvre sa vue détaillée"""

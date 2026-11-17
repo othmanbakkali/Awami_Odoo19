@@ -13,7 +13,7 @@ class AccountMove(models.Model):
         ('traite', 'Effet / Traite'),
         ('effet_cheque', 'Effet / Chèque'),
         ('especes', 'Espèces'),
-    ], string="Mode de règlement", default='virement', tracking=True)
+    ], string="Mode de règlement", default='especes', tracking=True)
 
     check_number = fields.Char(
         string="N° de série / Chèque / Effet",
@@ -38,14 +38,23 @@ class AccountMove(models.Model):
 
     @api.onchange('partner_id')
     def _onchange_partner_id_check_client(self):
-        if self.partner_id and not self.check_client_name:
-            self.check_client_name = self.partner_id.name
+        if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
+            if self.partner_id and not self.check_client_name:
+                self.check_client_name = self.partner_id.name
+        else:
+            self.check_client_name = False
+            self.check_number = False
+            self.check_date_due = False
 
     @api.onchange('payment_mode')
     def _onchange_payment_mode_check(self):
         if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
             if self.partner_id and not self.check_client_name:
                 self.check_client_name = self.partner_id.name
+        else:
+            self.check_client_name = False
+            self.check_number = False
+            self.check_date_due = False
 
     # Les informations de chèque / effet sont désormais saisies au niveau du Paiement et non sur la facture
 
@@ -88,11 +97,13 @@ class AccountMove(models.Model):
         for pay in self.matched_payment_ids | self.reconciled_payment_ids:
             if getattr(pay, 'payment_mode', False):
                 return pay.payment_mode
-        return self.payment_mode or 'virement'
+        return self.payment_mode or 'especes'
 
     def _get_effective_check_number(self):
         """Retourne le numéro de chèque/effet issu du paiement ou de la facture."""
         self.ensure_one()
+        if self.payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque'):
+            return ''
         if self.check_number:
             return self.check_number
         for pay in self.matched_payment_ids | self.reconciled_payment_ids:
@@ -103,6 +114,8 @@ class AccountMove(models.Model):
     def _get_effective_check_client_name(self):
         """Retourne le nom de l'émetteur du chèque/effet."""
         self.ensure_one()
+        if self.payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque'):
+            return ''
         if self.check_client_name:
             return self.check_client_name
         for pay in self.matched_payment_ids | self.reconciled_payment_ids:
@@ -113,6 +126,8 @@ class AccountMove(models.Model):
     def _get_effective_check_date_due(self):
         """Retourne la date d'échéance du chèque/effet."""
         self.ensure_one()
+        if self.payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque'):
+            return False
         if self.check_date_due:
             return self.check_date_due
         for pay in self.matched_payment_ids | self.reconciled_payment_ids:

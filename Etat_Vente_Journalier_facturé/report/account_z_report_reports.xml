@@ -15,7 +15,7 @@
     </record>
 
     <record id="action_report_z" model="ir.actions.report">
-        <field name="name">Rapport Z / X Journalier</field>
+        <field name="name">Rapport des Ventes Journalier</field>
         <field name="model">account.z.report</field>
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">etat_vente_journalier_facture.report_z_document_template</field>

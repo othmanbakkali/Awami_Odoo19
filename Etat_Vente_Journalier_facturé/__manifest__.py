@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 {
-    'name': 'Rapport Z Journalier des Ventes Facturées',
-    'version': '19.0.1.0.7',
+    'name': 'Rapport des Ventes Journalier',
+    'version': '19.0.1.0.9',
     'category': 'Accounting/Accounting',
-    'summary': 'Rapport Z et X journalier haute lisibilité : affichage du nom du client pour Banque/Virement, Chèque et Effet, ventilation stricte et exports complets',
+    'summary': 'Rapport des Ventes journalier haute lisibilité : détail des chèques & effets, ventilation stricte des modes de paiement et exports complets',
     'description': """
 Ce module permet de générer des Rapports Z (Clôtures journalières) et Rapports X (Aperçus)
 des ventes facturées pour Odoo 19 :
@@ -18,7 +18,9 @@ des ventes facturées pour Odoo 19 :
     'depends': ['account'],
     'data': [
         'security/ir.model.access.csv',
+        'security/account_z_report_security.xml',
         'data/ir_sequence_data.xml',
+
         'views/res_company_views.xml',
         'views/account_z_report_wizard_views.xml',
         'views/account_z_report_views.xml',

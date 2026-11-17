@@ -30,18 +30,22 @@ class ReportFactureAvance(models.Model):
 
     is_hidden = fields.Boolean("Masqué", default=False)
 
+    def _get_allowed_moves(self):
+        allowed_cids = self.env.user.company_ids.ids
+        return self.env['account.move'].sudo().browse(self.ids).exists().filtered(
+            lambda m: not m.company_id or m.company_id.id in allowed_cids
+        )
+
     def write(self, vals):
         if 'is_hidden' in vals:
-            moves = self.env['account.move'].browse(self.ids)
+            moves = self._get_allowed_moves()
             moves.write({'is_report_hidden': vals['is_hidden']})
         return True
 
     def action_toggle_hidden(self):
         """Bascule l'état masqué/visible pour les enregistrements sélectionnés."""
-        for rec in self:
-            move = self.env['account.move'].browse(rec.id)
-            if move.exists():
-                move.is_report_hidden = not move.is_report_hidden
+        for move in self._get_allowed_moves():
+            move.is_report_hidden = not move.is_report_hidden
         return {
             'type': 'ir.actions.client',
             'tag': 'reload',
@@ -49,7 +53,7 @@ class ReportFactureAvance(models.Model):
 
     def action_hide_movements(self):
         """Action de masse : Masquer les mouvements sélectionnés."""
-        moves = self.env['account.move'].browse(self.ids)
+        moves = self._get_allowed_moves()
         moves.write({'is_report_hidden': True})
         return {
             'type': 'ir.actions.client',
@@ -58,7 +62,7 @@ class ReportFactureAvance(models.Model):
 
     def action_unhide_movements(self):
         """Action de masse : Rendre visibles les mouvements sélectionnés."""
-        moves = self.env['account.move'].browse(self.ids)
+        moves = self._get_allowed_moves()
         moves.write({'is_report_hidden': False})
         return {
             'type': 'ir.actions.client',

@@ -4,7 +4,7 @@
         <field name="name">account.z.report.wizard.form</field>
         <field name="model">account.z.report.wizard</field>
         <field name="arch" type="xml">
-            <form string="Générer Rapport Z / X Journalier">
+            <form string="Générer Rapport des Ventes">
                 <field name="company_id" invisible="1"/>
                 <group>
                     <group>
@@ -28,7 +28,7 @@
     </record>
 
     <record id="action_account_z_report_wizard" model="ir.actions.act_window">
-        <field name="name">Générer Rapport Z Journalier</field>
+        <field name="name">Générer Rapport des Ventes</field>
         <field name="res_model">account.z.report.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>

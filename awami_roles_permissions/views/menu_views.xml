@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================================================================= -->
+    <!-- 1. APPLICATION & MENU PRINCIPAL "RÔLES & DROITS D'ACCÈS"          -->
+    <!-- ================================================================= -->
+    <menuitem id="menu_roles_permissions_root"
+              name="Rôles &amp; Droits"
+              sequence="55"
+              groups="base.group_erp_manager,base.group_system"/>
+
+    <menuitem id="menu_res_users_role_main"
+              name="Rôles Utilisateurs"
+              parent="menu_roles_permissions_root"
+              action="action_res_users_role"
+              sequence="10"/>
+
+    <menuitem id="menu_res_users_management_main"
+              name="Utilisateurs &amp; Leurs Rôles"
+              parent="menu_roles_permissions_root"
+              action="base.action_res_users"
+              sequence="20"/>
+
+    <!-- ================================================================= -->
+    <!-- 2. INTÉGRATION SOUS CONFIGURATION > UTILISATEURS & SOCIÉTÉS       -->
+    <!-- ================================================================= -->
+    <menuitem id="menu_res_users_role_settings"
+              name="Rôles Utilisateurs"
+              parent="base.menu_users"
+              action="action_res_users_role"
+              sequence="15"/>
+
+</odoo>
+

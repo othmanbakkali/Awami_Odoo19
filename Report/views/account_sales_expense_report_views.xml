@@ -17,7 +17,9 @@
                 <field name="total_expenses_all" string="Total Dépenses" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                 <field name="net_result" string="Résultat Net" widget="monetary" options="{'currency_field': 'currency_id'}" decoration-bf="1"/>
                 <field name="net_cashbox" string="Solde Caisse" widget="monetary" options="{'currency_field': 'currency_id'}" decoration-bf="1"/>
+                <field name="company_id" groups="base.group_multi_company" optional="show"/>
                 <field name="user_id" string="Utilisateur"/>
+
                 <field name="date_generation" string="Date Édition" widget="datetime"/>
             </list>
         </field>

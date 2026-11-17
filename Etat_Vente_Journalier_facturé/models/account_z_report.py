@@ -8,13 +8,13 @@ import xlsxwriter
 
 class AccountZReport(models.Model):
     _name = 'account.z.report'
-    _description = 'Rapport Z Journalier des Ventes Facturées'
+    _description = 'Rapport des Ventes Journalier'
     _order = 'date_generation desc, id desc'
 
-    name = fields.Char(string='Numéro Z', required=True, copy=False, default='/')
+    name = fields.Char(string='Numéro', required=True, copy=False, default='/')
     report_type = fields.Selection([
-        ('x', 'Rapport X (Provisoire)'),
-        ('z', 'Rapport Z (Clôture)')
+        ('x', 'Rapport des Ventes (Provisoire)'),
+        ('z', 'Rapport des Ventes (Clôture)')
     ], string='Type de Rapport', required=True, default='z')
     date_start = fields.Date(string='Date Début', required=True)
     date_end = fields.Date(string='Date Fin', required=True)
@@ -121,7 +121,38 @@ class AccountZReport(models.Model):
 
         return 'Virement'
 
+    def _get_reconciled_amount_between(self, pay, inv):
+        """Calcule le montant exact lettré entre un paiement et une facture spécifique."""
+        try:
+            pay_lines = pay.move_id.line_ids.filtered(lambda l: l.account_id.account_type in ('asset_receivable', 'liability_payable'))
+            inv_lines = inv.line_ids.filtered(lambda l: l.account_id.account_type in ('asset_receivable', 'liability_payable'))
+            total_allocated = 0.0
+            for pl in pay_lines:
+                for pr in (pl.matched_debit_ids | pl.matched_credit_ids):
+                    other_line = pr.debit_move_id if pr.credit_move_id.id == pl.id else pr.credit_move_id
+                    if other_line in inv_lines:
+                        total_allocated += pr.amount
+            if total_allocated > 0.005:
+                return total_allocated
+        except Exception:
+            pass
+
+        try:
+            wjson = inv.invoice_payments_widget
+            if wjson:
+                if isinstance(wjson, (bytes, bytearray)):
+                    wjson = wjson.decode('utf-8')
+                wd = json.loads(wjson) if isinstance(wjson, str) else wjson
+                for item in wd.get('content', []):
+                    if item.get('account_payment_id') == pay.id:
+                        return item.get('amount', 0.0)
+        except Exception:
+            pass
+
+        return min(pay.amount, inv.amount_total)
+
     def get_report_data(self):
+
         self.ensure_one()
         # 1. Fetch invoices
         domain = [
@@ -180,9 +211,15 @@ class AccountZReport(models.Model):
         }
         
         detailed_payments = []
+        cheques_list = []
+        cheques_seen = set()
 
         for move in moves:
             sign = -1 if move.move_type == 'out_refund' else 1
+            inv_mode = 'Espèces'
+            check_num = ''
+            check_client = ''
+            check_due = False
             
             # Totals
             total_untaxed += move.amount_untaxed_signed
@@ -195,7 +232,7 @@ class AccountZReport(models.Model):
             # Recherche du paiement lié (account.payment) pour extraire mode réel et informations de chèque
             linked_pay = False
             for p in (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])):
-                if p.exists():
+                if p.exists() and p.company_id == self.company_id:
                     linked_pay = p
                     break
             if not linked_pay:
@@ -209,24 +246,60 @@ class AccountZReport(models.Model):
                             pid = item.get('account_payment_id')
                             if pid:
                                 p = self.env['account.payment'].browse(pid)
-                                if p.exists():
+                                if p.exists() and p.company_id == self.company_id:
                                     linked_pay = p
                                     break
                     except Exception:
                         pass
 
+
             if linked_pay:
                 inv_mode = self._determine_move_payment_mode(move, payment=linked_pay)
-                check_num = getattr(linked_pay, 'check_number', False) or getattr(move, 'check_number', False) or ''
-                check_client = getattr(linked_pay, 'check_client_name', False) or getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else 'Client comptoir')
-                check_due = getattr(linked_pay, 'check_date_due', False) or getattr(move, 'check_date_due', False) or False
+                if inv_mode in ('Chèque', 'Effet'):
+                    check_num = getattr(linked_pay, 'check_number', False) or getattr(move, 'check_number', False) or ''
+                    check_client = getattr(linked_pay, 'check_client_name', False) or getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
+                    check_due = getattr(linked_pay, 'check_date_due', False) or getattr(move, 'check_date_due', False) or False
+                else:
+                    check_num = ''
+                    check_client = ''
+                    check_due = False
             else:
                 inv_mode = self._determine_move_payment_mode(move)
-                check_num = getattr(move, 'check_number', False) or ''
-                check_client = getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else 'Client comptoir')
-                check_due = getattr(move, 'check_date_due', False) or False
+                if inv_mode in ('Chèque', 'Effet'):
+                    check_num = getattr(move, 'check_number', False) or ''
+                    check_client = getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
+                    check_due = getattr(move, 'check_date_due', False) or False
+                else:
+                    check_num = ''
+                    check_client = ''
+                    check_due = False
 
             due_str = check_due.strftime('%d/%m/%Y') if hasattr(check_due, 'strftime') else (str(check_due) if check_due else '')
+
+            # Extraction des dates de règlement pour traçabilité
+            pay_dates_set = []
+            for p in (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])):
+                if p.exists() and p.date:
+                    d_str = p.date.strftime('%d/%m/%Y')
+                    if d_str not in pay_dates_set:
+                        pay_dates_set.append(d_str)
+
+            if not pay_dates_set and move.invoice_payments_widget:
+                try:
+                    wjson = move.invoice_payments_widget
+                    if isinstance(wjson, (bytes, bytearray)):
+                        wjson = wjson.decode('utf-8')
+                    wd = json.loads(wjson) if isinstance(wjson, str) else wjson
+                    for item in wd.get('content', []):
+                        d = item.get('date')
+                        if d:
+                            d_str = d.strftime('%d/%m/%Y') if hasattr(d, 'strftime') else str(d)
+                            if d_str not in pay_dates_set:
+                                pay_dates_set.append(d_str)
+                except Exception:
+                    pass
+
+            payment_date_str = ', '.join(pay_dates_set) if pay_dates_set else False
 
             item_data = {
                 'date': move.date,
@@ -236,6 +309,7 @@ class AccountZReport(models.Model):
                 'check_number': check_num,
                 'check_client_name': check_client,
                 'check_date_due': due_str,
+                'payment_date': payment_date_str,
                 'untaxed': move.amount_untaxed_signed,
                 'tax': move.amount_tax_signed,
                 'total': move.amount_total_signed,
@@ -300,25 +374,26 @@ class AccountZReport(models.Model):
                             payment = self.env['account.payment'].browse(payment_id) if payment_id else False
                             mode = self._determine_move_payment_mode(move, pay_info=pay_info, payment=payment)
                             
-                            pay_client = check_client
-                            pay_check = check_num
-                            if payment and payment.exists():
-                                if getattr(payment, 'check_client_name', False):
-                                    pay_client = payment.check_client_name
-                                elif payment.partner_id:
-                                    pay_client = payment.partner_id.name
-                                if getattr(payment, 'check_number', False):
-                                    pay_check = payment.check_number
-                                elif getattr(payment, 'memo', False):
-                                    pay_check = payment.memo
-                                    
+                            p_num = ''
+                            p_client = ''
+                            if mode in ('Chèque', 'Effet'):
+                                if payment and payment.exists():
+                                    p_num = getattr(payment, 'check_number', False) or getattr(payment, 'memo', False) or check_num
+                                    p_client = getattr(payment, 'check_client_name', False) or (payment.partner_id.name if payment.partner_id else check_client)
+                                else:
+                                    p_num = check_num
+                                    p_client = check_client
+
+                            client_disp = p_client if mode in ('Chèque', 'Effet') else (payment.partner_id.name if payment and payment.partner_id else (move.partner_id.name or 'Client comptoir'))
+                            check_disp = p_num if mode in ('Chèque', 'Effet') else ''
+
                             payments_by_mode[mode] = payments_by_mode.get(mode, 0.0) + amt
                             widget_allocated += amt
                             
                             detailed_payments.append({
                                 'mode': mode,
-                                'client': pay_client,
-                                'check_number': pay_check,
+                                'client': client_disp,
+                                'check_number': check_disp,
                                 'amount': amt,
                                 'invoice_name': move.name,
                             })
@@ -331,11 +406,196 @@ class AccountZReport(models.Model):
                     payments_by_mode[inv_mode] = payments_by_mode.get(inv_mode, 0.0) + remaining_unallocated
                     detailed_payments.append({
                         'mode': inv_mode,
-                        'client': check_client,
-                        'check_number': check_num,
+                        'client': check_client if inv_mode in ('Chèque', 'Effet') else '',
+                        'check_number': check_num if inv_mode in ('Chèque', 'Effet') else '',
                         'amount': remaining_unallocated,
                         'invoice_name': move.name,
                     })
+
+        # Traçabilité des règlements de factures antérieures (Créances recouvrées durant la période)
+        period_payments = self.env['account.payment'].search([
+            ('company_id', '=', self.company_id.id),
+            ('date', '>=', self.date_start),
+            ('date', '<=', self.date_end),
+            ('payment_type', '=', 'inbound'),
+            ('state', 'in', ('posted', 'paid'))
+        ], order='date asc, id asc')
+
+        prior_payments_list = []
+        prior_payments_total = 0.0
+
+        for pay in period_payments:
+            # RÈGLE FONDAMENTALE : Ne retenir que les factures dont la date est <= date de fin du rapport!
+            # Les mouvements postérieurs (inv.date > self.date_end) n'existaient pas encore à cette date.
+            valid_reconciled_invs = pay.reconciled_invoice_ids.filtered(
+                lambda m: m.move_type in ('out_invoice', 'out_refund') 
+                and m.company_id == self.company_id 
+                and m.date <= self.date_end
+            )
+            prior_invs = valid_reconciled_invs.filtered(lambda m: m.id not in moves.ids and m.date < self.date_start)
+            current_invs = valid_reconciled_invs.filtered(lambda m: m.id in moves.ids)
+
+            p_mode_raw = getattr(pay, 'payment_mode', False)
+            if not p_mode_raw:
+                j_name = (pay.journal_id.name or '').lower()
+                j_type = pay.journal_id.type or ''
+                if 'chèque' in j_name or 'cheque' in j_name:
+                    p_mode_raw = 'cheque'
+                elif 'effet' in j_name or 'traite' in j_name:
+                    p_mode_raw = 'effet'
+                elif 'virement' in j_name or j_type == 'bank':
+                    p_mode_raw = 'virement'
+                elif j_type == 'cash' or 'espece' in j_name or 'caisse' in j_name:
+                    p_mode_raw = 'especes'
+
+            mode_map = {
+                'especes': 'Espèces',
+                'cheque': 'Chèque',
+                'effet': 'Effet',
+                'traite': 'Effet',
+                'effet_cheque': 'Effet',
+                'virement': 'Virement'
+            }
+            pay_mode_label = mode_map.get(p_mode_raw, pay.journal_id.name or 'Autre')
+
+            chk_num = (getattr(pay, 'check_number', False) or getattr(pay, 'memo', False) or '') if pay_mode_label in ('Chèque', 'Effet') else ''
+            chk_client = (getattr(pay, 'check_client_name', False) or (pay.partner_id.name if pay.partner_id else '')) if pay_mode_label in ('Chèque', 'Effet') else ''
+            chk_due = getattr(pay, 'check_date_due', False) if pay_mode_label in ('Chèque', 'Effet') else False
+            chk_due_str = chk_due.strftime('%d/%m/%Y') if hasattr(chk_due, 'strftime') else (str(chk_due) if chk_due else '')
+
+            total_allocated_to_prior = 0.0
+            for inv in prior_invs:
+                inv_alloc = self._get_reconciled_amount_between(pay, inv)
+                inv_alloc = min(inv_alloc, pay.amount)
+                total_allocated_to_prior += inv_alloc
+                prior_payments_total += inv_alloc
+
+                prior_payments_list.append({
+                    'payment_id': pay.id,
+                    'payment_name': pay.name,
+                    'payment_date': pay.date,
+                    'invoice_id': inv.id,
+                    'invoice_name': inv.name or '/',
+                    'invoice_date': inv.date,
+                    'partner': inv.partner_id.name or pay.partner_id.name or 'Client comptoir',
+                    'mode': pay_mode_label,
+                    'check_number': chk_num,
+                    'check_client_name': chk_client,
+                    'check_date_due': chk_due_str,
+                    'amount': inv_alloc,
+                    'type': 'Facture Antérieure'
+                })
+                payments_by_mode[pay_mode_label] = payments_by_mode.get(pay_mode_label, 0.0) + inv_alloc
+                detailed_payments.append({
+                    'mode': pay_mode_label,
+                    'client': chk_client,
+                    'check_number': chk_num,
+                    'amount': inv_alloc,
+                    'invoice_name': f"{inv.name} (Antérieure)",
+                })
+
+            # Reliquat Acompte / Avance non encore alloué aux factures antérieures ou du jour
+            allocated_to_current = sum(
+                (inv.amount_total - inv.amount_residual) for inv in current_invs
+            ) if current_invs else 0.0
+            unallocated_advance = max(0.0, pay.amount - total_allocated_to_prior - allocated_to_current)
+
+            if unallocated_advance > 0.005 and not current_invs:
+                prior_payments_total += unallocated_advance
+                prior_payments_list.append({
+                    'payment_id': pay.id,
+                    'payment_name': pay.name,
+                    'payment_date': pay.date,
+                    'invoice_id': False,
+                    'invoice_name': 'Acompte / Avance',
+                    'invoice_date': pay.date,
+                    'partner': pay.partner_id.name or 'Client comptoir',
+                    'mode': pay_mode_label,
+                    'check_number': chk_num,
+                    'check_client_name': chk_client,
+                    'check_date_due': chk_due_str,
+                    'amount': unallocated_advance,
+                    'type': 'Acompte libre'
+                })
+                payments_by_mode[pay_mode_label] = payments_by_mode.get(pay_mode_label, 0.0) + unallocated_advance
+                detailed_payments.append({
+                    'mode': pay_mode_label,
+                    'client': chk_client,
+                    'check_number': chk_num,
+                    'amount': unallocated_advance,
+                    'invoice_name': 'Acompte / Avance',
+                })
+
+            # TABLE DES CHÈQUES & EFFETS : UNE SEULE LIGNE PAR CHÈQUE PHYSIQUE (MONTANT DU CHÈQUE)
+            if pay_mode_label in ('Chèque', 'Effet'):
+                pay_key = pay.id
+                if pay_key not in cheques_seen:
+                    cheques_seen.add(pay_key)
+                    if valid_reconciled_invs:
+                        inv_names = ', '.join([m.name for m in valid_reconciled_invs if m.name])
+                        total_inv_alloc = sum(self._get_reconciled_amount_between(pay, inv) for inv in valid_reconciled_invs)
+                        if total_inv_alloc < pay.amount - 0.005:
+                            state_str = f"Encaissé ({inv_names} + Acompte)"
+                            inv_display = f"{inv_names} (+ Acompte)"
+                        else:
+                            state_str = f"Encaissé ({inv_names})"
+                            inv_display = inv_names
+                    else:
+                        inv_display = 'Acompte / Avance'
+                        state_str = 'Encaissé (Acompte)'
+
+                    cheques_list.append({
+                        'date': pay.date,
+                        'invoice_name': inv_display,
+                        'partner': pay.partner_id.name or 'Client comptoir',
+                        'check_client_name': chk_client or pay.partner_id.name or '-',
+                        'check_number': chk_num or '-',
+                        'check_date_due': chk_due_str or '-',
+                        'amount': pay.amount,
+                        'mode': pay_mode_label,
+                        'state': state_str
+                    })
+
+        # Ajouter les factures du jour en chèque/effet non encore lettrées à un paiement
+        for move in moves:
+            inv_mode = self._determine_move_payment_mode(move)
+            if inv_mode in ('Chèque', 'Effet'):
+                linked_p = (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])).filtered(lambda p: p.id in cheques_seen)
+                if not linked_p and move.id not in cheques_seen:
+                    has_prior_check = False
+                    if move.invoice_payments_widget:
+                        try:
+                            wj = move.invoice_payments_widget
+                            if isinstance(wj, (bytes, bytearray)):
+                                wj = wj.decode('utf-8')
+                            wjd = json.loads(wj) if isinstance(wj, str) else wj
+                            for item in wjd.get('content', []):
+                                p_id = item.get('account_payment_id')
+                                if p_id:
+                                    p_obj = self.env['account.payment'].browse(p_id)
+                                    if p_obj.exists() and p_obj.date < self.date_start:
+                                        has_prior_check = True
+                                        break
+                        except Exception:
+                            pass
+                    if not has_prior_check:
+                        cheques_seen.add(move.id)
+                        check_n = getattr(move, 'check_number', False) or '-'
+                        check_c = getattr(move, 'check_client_name', False) or move.partner_id.name or '-'
+                        check_d = getattr(move, 'check_date_due', False)
+                        d_str = check_d.strftime('%d/%m/%Y') if hasattr(check_d, 'strftime') else (str(check_d) if check_d else '-')
+                        cheques_list.append({
+                            'date': move.date,
+                            'invoice_name': move.name or '/',
+                            'partner': move.partner_id.name or 'Client comptoir',
+                            'check_client_name': check_c,
+                            'check_number': check_n,
+                            'check_date_due': d_str,
+                            'amount': move.amount_total_signed,
+                            'mode': inv_mode,
+                            'state': payment_states_map.get(move.payment_state, move.payment_state or 'Non payé')
+                        })
+
                     
         # Format Taxes and Products list
         taxes_list = []
@@ -389,7 +649,8 @@ class AccountZReport(models.Model):
                 'ca': info['ca']
             })
             
-        total_paid = total_total - total_residual
+        payments_total = sum(p['amount'] for p in payments_list)
+        total_paid = payments_total
 
         invoices_untaxed = sum(inv['untaxed'] for inv in invoices_list)
         invoices_tax = sum(inv['tax'] for inv in invoices_list)
@@ -402,7 +663,20 @@ class AccountZReport(models.Model):
         refunds_total = sum(ref['total'] for ref in refunds_list)
         refunds_paid = sum(ref['paid'] for ref in refunds_list)
         refunds_residual = sum(ref['residual'] for ref in refunds_list)
-        payments_total = sum(p['amount'] for p in payments_list)
+
+        # Encaissements sur Factures Antérieures (Créances Recouvrées) par mode
+        prior_payments_by_mode = {}
+        for pp in prior_payments_list:
+            m = pp.get('mode') or 'Autre'
+            prior_payments_by_mode[m] = prior_payments_by_mode.get(m, 0.0) + pp.get('amount', 0.0)
+
+        prior_payments_summary = [
+            {'mode': m, 'amount': amt}
+            for m, amt in sorted(prior_payments_by_mode.items(), key=lambda x: (
+                0 if x[0] == 'Espèces' else (1 if x[0] == 'Virement' else (2 if x[0] == 'Chèque' else (3 if x[0] == 'Effet' else 4)))
+            ))
+            if amt > 0.005
+        ]
         
         return {
             'moves': moves,
@@ -425,9 +699,23 @@ class AccountZReport(models.Model):
                 'refunds_paid': refunds_paid,
                 'refunds_residual': refunds_residual,
                 'payments_total': payments_total,
+                'prior_payments_total': prior_payments_total,
+                'prior_payments_by_mode': prior_payments_by_mode,
+                'prior_payments_summary': prior_payments_summary,
+                'total_collected': payments_total,
             },
             'taxes': taxes_list,
             'payments': payments_list,
+            'cheques': cheques_list,
+            'cheques_count': len(cheques_list),
+            'cheques_total_amount': sum(c['amount'] for c in cheques_list if c['mode'] == 'Chèque'),
+            'effets_total_amount': sum(c['amount'] for c in cheques_list if c['mode'] == 'Effet'),
+            'cheques_global_amount': sum(c['amount'] for c in cheques_list),
+            'prior_payments': prior_payments_list,
+            'prior_payments_count': len(prior_payments_list),
+            'prior_payments_total': prior_payments_total,
+            'prior_payments_by_mode': prior_payments_by_mode,
+            'prior_payments_summary': prior_payments_summary,
             'invoices': invoices_list,
             'refunds': refunds_list,
             'products': top_products_list,
@@ -581,9 +869,11 @@ class AccountZReport(models.Model):
         sum_data = [
             ('Nombre de factures', data['summary']['invoice_count']),
             ('Nombre d\'avoirs', data['summary']['refund_count']),
-            ('Total TTC', data['summary']['total_total']),
-            ('Montant payé', data['summary']['total_paid']),
-            ('Reste à encaisser', data['summary']['total_residual']),
+            ('Total Ventes TTC', data['summary']['total_total']),
+            ('Factures réglées', data['summary']['invoices_paid']),
+            ('Reste à encaisser factures', data['summary']['total_residual']),
+            ('Encaissements créances antérieures', data['summary']['prior_payments_total']),
+            ('Total général encaissé', data['summary']['payments_total']),
         ]
         
         for label, val in sum_data:
@@ -704,9 +994,11 @@ class AccountZReport(models.Model):
         writer.writerow(['Indicateur', 'Valeur'])
         writer.writerow(['Nombre de factures', data['summary']['invoice_count']])
         writer.writerow(['Nombre d\'avoirs', data['summary']['refund_count']])
-        writer.writerow(['Total TTC', data['summary']['total_total']])
-        writer.writerow(['Montant payé', data['summary']['total_paid']])
-        writer.writerow(['Reste à encaisser', data['summary']['total_residual']])
+        writer.writerow(['Total Ventes TTC', data['summary']['total_total']])
+        writer.writerow(['Factures réglées', data['summary']['invoices_paid']])
+        writer.writerow(['Reste à encaisser factures', data['summary']['total_residual']])
+        writer.writerow(['Encaissements créances antérieures', data['summary']['prior_payments_total']])
+        writer.writerow(['Total général encaissé', data['summary']['payments_total']])
         writer.writerow([])
         
         # 2. Payments

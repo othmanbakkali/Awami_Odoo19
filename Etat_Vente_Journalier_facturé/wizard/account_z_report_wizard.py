@@ -4,7 +4,7 @@ from odoo.exceptions import UserError
 
 class AccountZReportWizard(models.TransientModel):
     _name = 'account.z.report.wizard'
-    _description = 'Assistant de Rapport Z Journalier'
+    _description = 'Assistant de Rapport des Ventes'
 
     date_start = fields.Date(
         string='Date Début', 
@@ -32,8 +32,8 @@ class AccountZReportWizard(models.TransientModel):
         string='Commercial'
     )
     report_type = fields.Selection([
-        ('x', 'Rapport X (Aperçu)'),
-        ('z', 'Rapport Z (Clôture)')
+        ('x', 'Rapport des Ventes (Aperçu)'),
+        ('z', 'Rapport des Ventes (Clôture)')
     ], string='Type de Rapport', required=True, default='z')
     
     invoice_state = fields.Selection([
@@ -50,6 +50,12 @@ class AccountZReportWizard(models.TransientModel):
     def _onchange_date_end(self):
         if self.date_start and self.date_end and self.date_start > self.date_end:
             self.date_start = self.date_end
+
+    @api.onchange('company_id')
+    def _onchange_company_id(self):
+        if self.journal_id and self.journal_id.company_id != self.company_id:
+            self.journal_id = False
+
 
     def action_generate_report(self):
         self.ensure_one()

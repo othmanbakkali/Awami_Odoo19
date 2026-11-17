@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Héritage Formulaire Utilisateur : Onglet Rôles & Droits Visuels -->
+    <record id="view_users_form_inherit_roles" model="ir.ui.view">
+        <field name="name">res.users.form.inherit.roles</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="priority">10</field>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook/page[@name='access_rights']" position="before">
+                <page string="Rôles &amp; Matrice des Droits" name="page_user_roles">
+                    <div class="alert alert-primary py-2 mb-3" role="status">
+                        <i class="fa fa-id-badge me-2" title="Rôles"/>
+                        <strong>Gestion des Droits par Rôle :</strong>
+                        Attribuez un ou plusieurs rôles à cet employé. Ses permissions d'accès (Lecture, Création, Modification, Suppression) sont calculées et appliquées automatiquement.
+                    </div>
+
+                    <group>
+                        <field name="role_ids" widget="many2many_tags"
+                               options="{'color_field': 'color', 'no_create_edit': False}"
+                               placeholder="Sélectionnez un rôle (ex: Caissier Magasin, Commercial...)..."/>
+                    </group>
+
+                    <separator string="Synthèse Lisible des Droits d'Accès Effectifs"/>
+                    <field name="effective_rights_html" nolabel="1"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Héritage Liste Utilisateurs : Colonne Rôles -->
+    <record id="view_users_tree_inherit_roles" model="ir.ui.view">
+        <field name="name">res.users.list.inherit.roles</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='login']" position="after">
+                <field name="roles_display" string="Rôles Métiers" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Awami - Suivi des Chèques et Effets',
-    'version': '19.0.1.0.1',
+    'version': '19.0.1.0.2',
     'category': 'Accounting/Accounting',
     'summary': 'Module de monitoring et suivi des chèques et effets : Payé, Impayé, Date d\'échéance, Retour banque, à base des paiements.',
     'description': """
@@ -25,6 +25,7 @@ Module de Suivi des Chèques &amp; Effets pour Awami Bois
     ],
     'data': [
         'security/ir.model.access.csv',
+        'security/suivi_cheque_security.xml',
         'data/sequence_data.xml',
         'views/suivi_cheque_views.xml',
         'views/account_payment_views.xml',

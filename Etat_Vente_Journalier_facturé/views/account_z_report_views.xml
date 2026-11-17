@@ -133,13 +133,13 @@
     <!-- Reporting Menu Items -->
     <!-- parent menu in invoicing is: account.menu_finance_reports -->
     <menuitem id="menu_account_z_report_wizard_action"
-              name="Rapport Z Journalier"
+              name="Rapport des Ventes"
               parent="account.menu_finance_reports"
               action="action_account_z_report_wizard"
               sequence="50"/>
 
     <menuitem id="menu_account_z_report_history_action"
-              name="Historique Rapports Z / X"
+              name="Historique Rapports des Ventes"
               parent="account.menu_finance_reports"
               action="action_account_z_report"
               sequence="51"/>
@@ -151,7 +151,7 @@
         <field name="inherit_id" ref="account.view_out_invoice_tree"/>
         <field name="arch" type="xml">
             <xpath expr="//header" position="inside">
-                <button name="%(action_account_z_report_wizard)d" string="Générer Rapport Z" type="action" class="btn-primary" groups="account.group_account_invoice"/>
+                <button name="%(action_account_z_report_wizard)d" string="Rapport des Ventes" type="action" class="btn-primary" groups="account.group_account_invoice"/>
             </xpath>
         </field>
     </record>
