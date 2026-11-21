@@ -21,8 +21,8 @@
         <field name="report_name">etat_vente_journalier_facture.report_z_document_template</field>
         <field name="report_file">etat_vente_journalier_facture.report_z_document_template</field>
         <field name="print_report_name">'Rapport_%s' % (object.name.replace('/', '_'))</field>
-        <field name="binding_model_id" ref="model_account_z_report"/>
-        <field name="binding_type">report</field>
+        <field name="attachment_use" eval="True"/>
+        <field name="attachment">(object.name or 'Rapport').replace('/', '_') + '.pdf'</field>
         <field name="paperformat_id" ref="paperformat_account_z_report"/>
     </record>
 </odoo>

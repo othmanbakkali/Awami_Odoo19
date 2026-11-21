@@ -458,25 +458,30 @@ class AccountSalesExpenseReport(models.Model):
             # Règlements rattachés aux ventes (Encaissements)
             if paid_amount > 0.005:
                 wjson = move.invoice_payments_widget
-                allocated = 0.0
                 if wjson:
                     try:
                         if isinstance(wjson, (bytes, bytearray)):
                             wjson = wjson.decode('utf-8')
                         wd = json.loads(wjson) if isinstance(wjson, str) else wjson
                         for pinfo in wd.get('content', []):
-                            amt = pinfo.get('amount', 0.0) * sign
                             pid = pinfo.get('account_payment_id')
                             pay = self.env['account.payment'].browse(pid) if pid else False
+                            # Account payments are aggregated below using their payment date.
+                            if pay and pay.exists():
+                                continue
+                            payment_date = str(pinfo.get('date') or '')[:10]
+                            if not payment_date or not (str(self.date_start) <= payment_date <= str(self.date_end)):
+                                continue
+                            amt = pinfo.get('amount', 0.0) * sign
                             pmode = self._determine_move_payment_mode(move, pay_info=pinfo, payment=pay)
                             if pmode not in treasury:
                                 pmode = 'Autre'
                             treasury[pmode]['in'] += amt
                             payments_by_mode[pmode] = payments_by_mode.get(pmode, 0.0) + amt
-                            allocated += amt
                             detailed_payments.append({
                                 'mode': pmode,
                                 'amount': amt,
+                                'payment_id': pay.id if pay and pay.exists() else False,
                                 'invoice_name': move.name,
                             })
 
@@ -492,23 +497,13 @@ class AccountSalesExpenseReport(models.Model):
 
                     except Exception:
                         pass
-                unallocated = paid_amount - allocated
-                if abs(unallocated) > 0.005:
-                    inv_mode = mode if mode in treasury else 'Autre'
-                    treasury[inv_mode]['in'] += unallocated * sign
-                    payments_by_mode[inv_mode] = payments_by_mode.get(inv_mode, 0.0) + (unallocated * sign)
-                    detailed_payments.append({
-                        'mode': inv_mode,
-                        'amount': unallocated * sign,
-                        'invoice_name': move.name,
-                    })
 
         # Traçabilité des règlements de factures antérieures (Créances recouvrées durant la période)
         period_payments = self.env['account.payment'].search([
             ('company_id', '=', self.company_id.id),
             ('date', '>=', self.date_start),
             ('date', '<=', self.date_end),
-            ('payment_type', '=', 'inbound'),
+            ('payment_type', 'in', ('inbound', 'outbound')),
             ('state', 'in', ('posted', 'paid'))
         ], order='date asc, id asc')
 
@@ -554,67 +549,43 @@ class AccountSalesExpenseReport(models.Model):
             chk_due = getattr(pay, 'check_date_due', False) if pay_mode_label in ('Chèque', 'Effet') else False
             chk_due_str = chk_due.strftime('%d/%m/%Y') if hasattr(chk_due, 'strftime') else (str(chk_due) if chk_due else '')
 
-            total_allocated_to_prior = 0.0
-            for inv in prior_invs:
+            for inv in current_invs | prior_invs:
                 inv_alloc = self._get_reconciled_amount_between(pay, inv)
                 inv_alloc = min(inv_alloc, pay.amount)
-                total_allocated_to_prior += inv_alloc
-                prior_payments_total += inv_alloc
-
-                prior_payments_list.append({
-                    'payment_id': pay.id,
-                    'payment_name': pay.name,
-                    'payment_date': pay.date,
-                    'invoice_id': inv.id,
-                    'invoice_name': inv.name or '/',
-                    'invoice_date': inv.date,
-                    'partner': inv.partner_id.name or pay.partner_id.name or 'Client divers',
-                    'mode': pay_mode_label,
-                    'check_number': chk_num,
-                    'check_client_name': chk_client,
-                    'check_date_due': chk_due_str,
-                    'amount': inv_alloc,
-                    'type': 'Facture Antérieure'
-                })
+                if inv_alloc <= 0.005:
+                    continue
+                signed_alloc = inv_alloc * (-1 if pay.payment_type == 'outbound' else 1)
+                if inv in prior_invs:
+                    prior_payments_total += signed_alloc
+                    prior_payments_list.append({
+                        'payment_id': pay.id,
+                        'payment_name': pay.name,
+                        'payment_date': pay.date,
+                        'invoice_id': inv.id,
+                        'invoice_name': inv.name or '/',
+                        'invoice_date': inv.date,
+                        'partner': inv.partner_id.name or pay.partner_id.name or 'Client divers',
+                        'mode': pay_mode_label,
+                        'check_number': chk_num,
+                        'check_client_name': chk_client,
+                        'check_date_due': chk_due_str,
+                        'amount': signed_alloc,
+                        'type': 'Facture Antérieure'
+                    })
+                    invoice_label = f"{inv.name} (Antérieure)"
+                else:
+                    invoice_label = inv.name or '/'
                 t_mode = pay_mode_label if pay_mode_label in treasury else 'Autre'
-                treasury[t_mode]['in'] += inv_alloc
-                payments_by_mode[t_mode] = payments_by_mode.get(t_mode, 0.0) + inv_alloc
+                if pay.payment_type == 'outbound':
+                    treasury[t_mode]['out'] += inv_alloc
+                else:
+                    treasury[t_mode]['in'] += inv_alloc
+                payments_by_mode[t_mode] = payments_by_mode.get(t_mode, 0.0) + signed_alloc
                 detailed_payments.append({
                     'mode': t_mode,
-                    'amount': inv_alloc,
-                    'invoice_name': f"{inv.name} (Antérieure)",
-                })
-
-            # Reliquat Acompte / Avance non encore alloué aux factures antérieures ou du jour
-            allocated_to_current = sum(
-                (inv.amount_total - inv.amount_residual) for inv in current_invs
-            ) if current_invs else 0.0
-            unallocated_advance = max(0.0, pay.amount - total_allocated_to_prior - allocated_to_current)
-
-            if unallocated_advance > 0.005 and not current_invs:
-                prior_payments_total += unallocated_advance
-                prior_payments_list.append({
+                    'amount': signed_alloc,
                     'payment_id': pay.id,
-                    'payment_name': pay.name,
-                    'payment_date': pay.date,
-                    'invoice_id': False,
-                    'invoice_name': 'Acompte / Avance',
-                    'invoice_date': pay.date,
-                    'partner': pay.partner_id.name or 'Client divers',
-                    'mode': pay_mode_label,
-                    'check_number': chk_num,
-                    'check_client_name': chk_client,
-                    'check_date_due': chk_due_str,
-                    'amount': unallocated_advance,
-                    'type': 'Acompte libre'
-                })
-                t_mode = pay_mode_label if pay_mode_label in treasury else 'Autre'
-                treasury[t_mode]['in'] += unallocated_advance
-                payments_by_mode[t_mode] = payments_by_mode.get(t_mode, 0.0) + unallocated_advance
-                detailed_payments.append({
-                    'mode': t_mode,
-                    'amount': unallocated_advance,
-                    'invoice_name': 'Acompte / Avance',
+                    'invoice_name': invoice_label,
                 })
 
             # TABLE DES CHÈQUES & EFFETS : UNE SEULE LIGNE PAR CHÈQUE PHYSIQUE (MONTANT DU CHÈQUE)
@@ -625,15 +596,10 @@ class AccountSalesExpenseReport(models.Model):
                     if valid_reconciled_invs:
                         inv_names = ', '.join([m.name for m in valid_reconciled_invs if m.name])
                         total_inv_alloc = sum(self._get_reconciled_amount_between(pay, inv) for inv in valid_reconciled_invs)
-                        if total_inv_alloc < pay.amount - 0.005:
-                            state_str = f"Encaissé ({inv_names} + Acompte)"
-                            inv_display = f"{inv_names} (+ Acompte)"
-                        else:
-                            state_str = f"Encaissé ({inv_names})"
-                            inv_display = inv_names
+                        state_str = f"Encaissé ({inv_names})"
+                        inv_display = inv_names
                     else:
-                        inv_display = 'Acompte / Avance'
-                        state_str = 'Encaissé (Acompte)'
+                        continue
 
                     cheques_list.append({
                         'date': pay.date,
@@ -915,9 +881,13 @@ class AccountSalesExpenseReport(models.Model):
         for mode in all_present_modes:
             mode_amount = payments_by_mode.get(mode, 0.0)
             mode_payments = [p for p in detailed_payments if p['mode'] == mode]
+            payment_keys = set()
+            for index, payment_detail in enumerate(mode_payments):
+                payment_id = payment_detail.get('payment_id')
+                payment_keys.add(('payment', payment_id) if payment_id else ('detail', index))
             payments_list.append({
                 'mode': mode,
-                'count': len(mode_payments),
+                'count': len(payment_keys),
                 'amount': mode_amount,
             })
 

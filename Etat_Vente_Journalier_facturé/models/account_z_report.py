@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
+from odoo.exceptions import AccessError, UserError
 import base64
 import io
 import json
 import csv
+import logging
 import xlsxwriter
+
+_logger = logging.getLogger(__name__)
 
 class AccountZReport(models.Model):
     _name = 'account.z.report'
@@ -27,6 +31,12 @@ class AccountZReport(models.Model):
         ('posted', 'Factures comptabilisées'),
         ('paid', 'Factures payées uniquement')
     ], string='État des factures', required=True, default='posted')
+    period_unlocked = fields.Boolean(
+        string='Période débloquée',
+        default=False,
+        readonly=True,
+        copy=False,
+    )
     
     # Financial summaries (Stored Snapshots)
     total_untaxed = fields.Float(string='Total HT', readonly=True)
@@ -46,14 +56,137 @@ class AccountZReport(models.Model):
     csv_file = fields.Binary(string='Fichier CSV', readonly=True)
     csv_filename = fields.Char(string='Nom de fichier CSV', readonly=True)
 
+    _Z_SNAPSHOT_FIELDS = {
+        'total_untaxed', 'total_tax', 'total_total', 'total_paid', 'total_residual',
+        'invoice_count', 'refund_count', 'invoice_ids', 'excel_file', 'excel_filename',
+        'csv_file', 'csv_filename', 'pdf_attachment_id',
+    }
+
+    def write(self, vals):
+        z_reports = self.filtered(lambda report: report.report_type == 'z')
+        if vals and z_reports:
+            snapshot_write = self.env.context.get('_z_snapshot_write') and set(vals).issubset(self._Z_SNAPSHOT_FIELDS)
+            period_lock_write = self.env.context.get('_z_period_lock') and set(vals) == {'period_unlocked'}
+            if not snapshot_write and not period_lock_write:
+                raise UserError(_('Un rapport Z archivé est immuable. Débloquez sa période pour créer un nouveau rapport.'))
+        return super().write(vals)
+
+    def unlink(self):
+        z_reports = self.filtered(lambda report: report.report_type == 'z')
+        if z_reports:
+            is_admin = self.env.is_admin() or self.env.user.has_group('base.group_system') or self.env.su
+            if not is_admin:
+                raise AccessError(_('Seul un administrateur peut supprimer un rapport Z.'))
+            if any(not report.period_unlocked for report in z_reports):
+                raise UserError(_(
+                    'Un rapport Z ne peut être supprimé que par un administrateur après déblocage de sa période.'
+                ))
+            archived_pdfs = z_reports.mapped('pdf_attachment_id').sudo().exists()
+            try:
+                archived_pdfs.unlink()
+            except Exception:
+                pass
+            result = super(AccountZReport, self).unlink()
+            return result
+        return super().unlink()
+
     @api.model_create_multi
     def create(self, vals_list):
+        locked_periods = {}
+        seen_periods = set()
         for vals in vals_list:
             if vals.get('report_type', 'z') == 'z':
+                company_id = vals.get('company_id')
+                date_start = vals.get('date_start')
+                date_end = vals.get('date_end')
+                vals.pop('period_unlocked', None)
+                if company_id and date_start and date_end:
+                    period_key = (company_id, str(date_start), str(date_end))
+                    if period_key in seen_periods:
+                        raise UserError(_('Un seul rapport Z peut être créé pour une même société et une même période.'))
+                    seen_periods.add(period_key)
+
+                    advisory_key = 'account.z.report:%s:%s:%s' % period_key
+                    self.env.cr.execute('SELECT pg_advisory_xact_lock(hashtext(%s))', [advisory_key])
+                    existing = self.sudo().search([
+                        ('report_type', '=', 'z'),
+                        ('company_id', '=', company_id),
+                        ('date_start', '=', date_start),
+                        ('date_end', '=', date_end),
+                    ])
+                    if existing:
+                        if not existing.filtered('period_unlocked'):
+                            raise UserError(_(
+                                'Un rapport Z existe déjà pour la période du %(start)s au %(end)s. '
+                                'Un administrateur doit débloquer cette période avant de la générer à nouveau.'
+                            ) % {'start': date_start, 'end': date_end})
+                        locked_periods[period_key] = existing
                 vals['name'] = self.env['ir.sequence'].next_by_code('account.z.report') or '/'
             else:
                 vals['name'] = "PROVISOIRE (Rapport X) - %s" % fields.Datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        return super().create(vals_list)
+        reports = super().create(vals_list)
+        for previous_reports in locked_periods.values():
+            previous_reports.sudo().with_context(_z_period_lock=True).write({'period_unlocked': False})
+        return reports
+
+    def action_unlock_period(self):
+        self.ensure_one()
+        is_admin = self.env.is_admin() or self.env.user.has_group('base.group_system') or self.env.su
+        if not is_admin:
+            raise AccessError(_('Seul un administrateur peut débloquer une période de rapport Z.'))
+        if self.report_type != 'z':
+            raise UserError(_('Seules les périodes des rapports Z peuvent être débloquées.'))
+        reports = self.sudo().search([
+            ('report_type', '=', 'z'),
+            ('company_id', '=', self.company_id.id),
+            ('date_start', '=', self.date_start),
+            ('date_end', '=', self.date_end),
+        ])
+        reports.with_context(_z_period_lock=True).write({'period_unlocked': True})
+        return True
+
+    def action_lock_period(self):
+        self.ensure_one()
+        is_admin = self.env.is_admin() or self.env.user.has_group('base.group_system') or self.env.su
+        if not is_admin:
+            raise AccessError(_('Seul un administrateur peut bloquer une période de rapport Z.'))
+        if self.report_type != 'z':
+            raise UserError(_('Seules les périodes des rapports Z peuvent être bloquées.'))
+        reports = self.sudo().search([
+            ('report_type', '=', 'z'),
+            ('company_id', '=', self.company_id.id),
+            ('date_start', '=', self.date_start),
+            ('date_end', '=', self.date_end),
+        ])
+        reports.with_context(_z_period_lock=True).write({'period_unlocked': False})
+        return True
+
+    def action_delete_period(self):
+        self.ensure_one()
+        is_admin = self.env.is_admin() or self.env.user.has_group('base.group_system') or self.env.su
+        if not is_admin:
+            raise AccessError(_('Seul un administrateur peut supprimer une période de rapport Z.'))
+        if self.report_type != 'z':
+            raise UserError(_('Seules les périodes des rapports Z peuvent être supprimées.'))
+        reports = self.sudo().search([
+            ('report_type', '=', 'z'),
+            ('company_id', '=', self.company_id.id),
+            ('date_start', '=', self.date_start),
+            ('date_end', '=', self.date_end),
+        ])
+        if not reports:
+            return {'type': 'ir.actions.act_window_close'}
+        if any(not report.period_unlocked for report in reports):
+            raise UserError(_('Débloquez d’abord la période avant de supprimer ses rapports.'))
+        reports.with_context(_admin_period_delete=True).unlink()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Historique Rapports Z/X'),
+            'res_model': 'account.z.report',
+            'view_mode': 'list',
+            'views': [(False, 'list'), (False, 'form')],
+            'target': 'current',
+        }
 
     def _determine_move_payment_mode(self, move, pay_info=None, payment=None):
         """
@@ -212,7 +345,37 @@ class AccountZReport(models.Model):
         
         detailed_payments = []
         cheques_list = []
-        cheques_seen = set()
+        has_check_tracking = bool(self.env.registry.models.get('suivi.cheque'))
+        tracked_cheques = self.env['suivi.cheque'].browse() if has_check_tracking else []
+        if has_check_tracking and moves:
+            tracked_cheques = self.env['suivi.cheque'].search([
+                ('company_id', '=', self.company_id.id),
+                ('check_type', '=', 'inbound'),
+                ('state', 'in', ('en_caisse', 'depose', 'paye')),
+                ('invoice_ids', 'in', moves.ids),
+                ('create_date', '<=', self.date_generation),
+            ], order='date_reception asc, id asc')
+        tracked_payment_ids = set(tracked_cheques.mapped('payment_id').ids) if has_check_tracking else set()
+        tracked_invoice_ids = set()
+        cheques_seen = set(tracked_payment_ids)
+        for check in tracked_cheques:
+            linked_invoices = check.invoice_ids.filtered(lambda inv: inv.id in moves.ids and inv.date <= self.date_end)
+            if not linked_invoices:
+                continue
+            tracked_invoice_ids.update(linked_invoices.ids)
+            check_due = check.check_date_due
+            check_due_str = check_due.strftime('%d/%m/%Y') if hasattr(check_due, 'strftime') else (str(check_due) if check_due else '-')
+            cheques_list.append({
+                'date': check.date_reception or check.payment_id.date or linked_invoices[:1].date,
+                'invoice_name': ', '.join(linked_invoices.mapped('name')),
+                'partner': check.partner_id.name or 'Client comptoir',
+                'check_client_name': check.check_client_name or check.partner_id.name or '-',
+                'check_number': check.check_number or '-',
+                'check_date_due': check_due_str,
+                'amount': check.amount,
+                'mode': 'Effet' if check.payment_mode == 'effet' else 'Chèque',
+                'state': 'Encaissé',
+            })
 
         for move in moves:
             sign = -1 if move.move_type == 'out_refund' else 1
@@ -361,7 +524,6 @@ class AccountZReport(models.Model):
             if abs(paid_portion) > 0.005:
                 widget_json = move.invoice_payments_widget
                 widget_allocated = 0.0
-                
                 if widget_json:
                     try:
                         if isinstance(widget_json, (bytes, bytearray)):
@@ -395,20 +557,23 @@ class AccountZReport(models.Model):
                                 'client': client_disp,
                                 'check_number': check_disp,
                                 'amount': amt,
+                                'payment_id': payment.id if payment and payment.exists() else False,
+                                'invoice_id': move.id,
                                 'invoice_name': move.name,
                             })
                     except Exception:
                         pass
-                        
                 remaining_unallocated = paid_portion - widget_allocated
                 if abs(remaining_unallocated) > 0.005:
-                    inv_mode = self._determine_move_payment_mode(move)
-                    payments_by_mode[inv_mode] = payments_by_mode.get(inv_mode, 0.0) + remaining_unallocated
+                    fallback_mode = self._determine_move_payment_mode(move)
+                    payments_by_mode[fallback_mode] = payments_by_mode.get(fallback_mode, 0.0) + remaining_unallocated
                     detailed_payments.append({
-                        'mode': inv_mode,
-                        'client': check_client if inv_mode in ('Chèque', 'Effet') else '',
-                        'check_number': check_num if inv_mode in ('Chèque', 'Effet') else '',
+                        'mode': fallback_mode,
+                        'client': check_client if fallback_mode in ('Chèque', 'Effet') else '',
+                        'check_number': check_num if fallback_mode in ('Chèque', 'Effet') else '',
                         'amount': remaining_unallocated,
+                        'payment_id': False,
+                        'invoice_id': move.id,
                         'invoice_name': move.name,
                     })
 
@@ -417,7 +582,7 @@ class AccountZReport(models.Model):
             ('company_id', '=', self.company_id.id),
             ('date', '>=', self.date_start),
             ('date', '<=', self.date_end),
-            ('payment_type', '=', 'inbound'),
+            ('payment_type', 'in', ('inbound', 'outbound')),
             ('state', 'in', ('posted', 'paid'))
         ], order='date asc, id asc')
 
@@ -433,7 +598,6 @@ class AccountZReport(models.Model):
                 and m.date <= self.date_end
             )
             prior_invs = valid_reconciled_invs.filtered(lambda m: m.id not in moves.ids and m.date < self.date_start)
-            current_invs = valid_reconciled_invs.filtered(lambda m: m.id in moves.ids)
 
             p_mode_raw = getattr(pay, 'payment_mode', False)
             if not p_mode_raw:
@@ -463,69 +627,43 @@ class AccountZReport(models.Model):
             chk_due = getattr(pay, 'check_date_due', False) if pay_mode_label in ('Chèque', 'Effet') else False
             chk_due_str = chk_due.strftime('%d/%m/%Y') if hasattr(chk_due, 'strftime') else (str(chk_due) if chk_due else '')
 
-            total_allocated_to_prior = 0.0
             for inv in prior_invs:
                 inv_alloc = self._get_reconciled_amount_between(pay, inv)
                 inv_alloc = min(inv_alloc, pay.amount)
-                total_allocated_to_prior += inv_alloc
-                prior_payments_total += inv_alloc
+                if inv_alloc <= 0.005:
+                    continue
+                signed_alloc = inv_alloc * (-1 if pay.payment_type == 'outbound' else 1)
+                if inv in prior_invs:
+                    prior_payments_total += signed_alloc
+                    prior_payments_list.append({
+                        'payment_id': pay.id,
+                        'payment_name': pay.name,
+                        'payment_date': pay.date,
+                        'invoice_id': inv.id,
+                        'invoice_name': inv.name or '/',
+                        'invoice_date': inv.date,
+                        'partner': inv.partner_id.name or pay.partner_id.name or 'Client comptoir',
+                        'mode': pay_mode_label,
+                        'check_number': chk_num,
+                        'check_client_name': chk_client,
+                        'check_date_due': chk_due_str,
+                        'amount': signed_alloc,
+                        'type': 'Facture Antérieure'
+                    })
+                    invoice_label = f"{inv.name} (Antérieure)"
+                else:
+                    invoice_label = inv.name or '/'
 
-                prior_payments_list.append({
+                payments_by_mode[pay_mode_label] = payments_by_mode.get(pay_mode_label, 0.0) + signed_alloc
+                detailed_payments.append({
+                    'mode': pay_mode_label,
+                    'client': chk_client,
+                    'check_number': chk_num,
+                    'amount': signed_alloc,
                     'payment_id': pay.id,
-                    'payment_name': pay.name,
-                    'payment_date': pay.date,
                     'invoice_id': inv.id,
-                    'invoice_name': inv.name or '/',
-                    'invoice_date': inv.date,
-                    'partner': inv.partner_id.name or pay.partner_id.name or 'Client comptoir',
-                    'mode': pay_mode_label,
-                    'check_number': chk_num,
-                    'check_client_name': chk_client,
-                    'check_date_due': chk_due_str,
-                    'amount': inv_alloc,
-                    'type': 'Facture Antérieure'
+                    'invoice_name': invoice_label,
                 })
-                payments_by_mode[pay_mode_label] = payments_by_mode.get(pay_mode_label, 0.0) + inv_alloc
-                detailed_payments.append({
-                    'mode': pay_mode_label,
-                    'client': chk_client,
-                    'check_number': chk_num,
-                    'amount': inv_alloc,
-                    'invoice_name': f"{inv.name} (Antérieure)",
-                })
-
-            # Reliquat Acompte / Avance non encore alloué aux factures antérieures ou du jour
-            allocated_to_current = sum(
-                (inv.amount_total - inv.amount_residual) for inv in current_invs
-            ) if current_invs else 0.0
-            unallocated_advance = max(0.0, pay.amount - total_allocated_to_prior - allocated_to_current)
-
-            if unallocated_advance > 0.005 and not current_invs:
-                prior_payments_total += unallocated_advance
-                prior_payments_list.append({
-                    'payment_id': pay.id,
-                    'payment_name': pay.name,
-                    'payment_date': pay.date,
-                    'invoice_id': False,
-                    'invoice_name': 'Acompte / Avance',
-                    'invoice_date': pay.date,
-                    'partner': pay.partner_id.name or 'Client comptoir',
-                    'mode': pay_mode_label,
-                    'check_number': chk_num,
-                    'check_client_name': chk_client,
-                    'check_date_due': chk_due_str,
-                    'amount': unallocated_advance,
-                    'type': 'Acompte libre'
-                })
-                payments_by_mode[pay_mode_label] = payments_by_mode.get(pay_mode_label, 0.0) + unallocated_advance
-                detailed_payments.append({
-                    'mode': pay_mode_label,
-                    'client': chk_client,
-                    'check_number': chk_num,
-                    'amount': unallocated_advance,
-                    'invoice_name': 'Acompte / Avance',
-                })
-
             # TABLE DES CHÈQUES & EFFETS : UNE SEULE LIGNE PAR CHÈQUE PHYSIQUE (MONTANT DU CHÈQUE)
             if pay_mode_label in ('Chèque', 'Effet'):
                 pay_key = pay.id
@@ -534,15 +672,10 @@ class AccountZReport(models.Model):
                     if valid_reconciled_invs:
                         inv_names = ', '.join([m.name for m in valid_reconciled_invs if m.name])
                         total_inv_alloc = sum(self._get_reconciled_amount_between(pay, inv) for inv in valid_reconciled_invs)
-                        if total_inv_alloc < pay.amount - 0.005:
-                            state_str = f"Encaissé ({inv_names} + Acompte)"
-                            inv_display = f"{inv_names} (+ Acompte)"
-                        else:
-                            state_str = f"Encaissé ({inv_names})"
-                            inv_display = inv_names
+                        state_str = f"Encaissé ({inv_names})"
+                        inv_display = inv_names
                     else:
-                        inv_display = 'Acompte / Avance'
-                        state_str = 'Encaissé (Acompte)'
+                        continue
 
                     cheques_list.append({
                         'date': pay.date,
@@ -560,6 +693,8 @@ class AccountZReport(models.Model):
         for move in moves:
             inv_mode = self._determine_move_payment_mode(move)
             if inv_mode in ('Chèque', 'Effet'):
+                if move.id in tracked_invoice_ids or move.payment_state != 'paid':
+                    continue
                 linked_p = (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])).filtered(lambda p: p.id in cheques_seen)
                 if not linked_p and move.id not in cheques_seen:
                     has_prior_check = False
@@ -620,7 +755,11 @@ class AccountZReport(models.Model):
         for mode in all_present_modes:
             mode_amount = payments_by_mode.get(mode, 0.0)
             mode_payments = [p for p in detailed_payments if p['mode'] == mode]
-            mode_count = len(mode_payments)
+            invoice_keys = set()
+            for index, payment_detail in enumerate(mode_payments):
+                invoice_id = payment_detail.get('invoice_id')
+                invoice_keys.add(('invoice', invoice_id) if invoice_id else ('detail', index))
+            mode_count = len(invoice_keys)
             
             checks_details = []
             if mode in ('Chèque', 'Effet', 'cheque', 'effet'):
@@ -723,10 +862,13 @@ class AccountZReport(models.Model):
 
     def generate_snapshot_data(self):
         self.ensure_one()
+        # A generated report is an immutable historical snapshot.
+        if self.pdf_attachment_id or self.excel_file or self.csv_file:
+            return
         report_data = self.get_report_data()
         
         # 1. Update Database fields
-        self.write({
+        self.with_context(_z_snapshot_write=True).write({
             'total_untaxed': report_data['summary']['total_untaxed'],
             'total_tax': report_data['summary']['total_tax'],
             'total_total': report_data['summary']['total_total'],
@@ -744,55 +886,63 @@ class AccountZReport(models.Model):
         excel_content = self._generate_excel_data(report_data)
         csv_content = self._generate_csv_data(report_data)
         
-        self.write({
+        self.with_context(_z_snapshot_write=True).write({
             'excel_file': base64.b64encode(excel_content),
             'excel_filename': excel_filename,
             'csv_file': base64.b64encode(csv_content),
             'csv_filename': csv_filename,
         })
         
-        # 3. PDF Generation & Archive (only if PDF report action is registered)
+        # 3. PDF Generation & Archive
         try:
-            report_action = self.env.ref('etat_vente_journalier_facture.action_report_z', False) or self.env.ref('Etat_Vente_Journalier_facturé.action_report_z', False)
-            if report_action:
-                if not self.env.ref(report_action.report_name, False):
-                    alt_name = 'Etat_Vente_Journalier_facturé.report_z_document_template' if 'etat_vente_journalier_facture' in (report_action.report_name or '') else 'etat_vente_journalier_facture.report_z_document_template'
-                    if self.env.ref(alt_name, False):
-                        report_action.sudo().write({'report_name': alt_name, 'report_file': alt_name})
-                pdf_content, _ = report_action._render_qweb_pdf(self.ids)
-                if self.pdf_attachment_id:
-                    try:
-                        self.pdf_attachment_id.unlink()
-                    except Exception:
-                        pass
-                attachment = self.env['ir.attachment'].create({
-                    'name': "%s.pdf" % self.name.replace('/', '_'),
-                    'type': 'binary',
-                    'datas': base64.b64encode(pdf_content),
-                    'res_model': 'account.z.report',
-                    'res_id': self.id,
-                    'mimetype': 'application/pdf',
-                })
-                self.write({'pdf_attachment_id': attachment.id})
-        except Exception:
-            pass
+            self._archive_pdf_snapshot()
+        except Exception as error:
+            _logger.exception('Impossible d’archiver le PDF du rapport %s', self.name)
+            if isinstance(error, UserError):
+                raise
+            raise UserError(_('Le PDF du rapport n’a pas pu être généré et archivé. Aucune archive n’a été modifiée.')) from error
+
+    def _archive_pdf_snapshot(self):
+        self.ensure_one()
+        if self.pdf_attachment_id:
+            return self.pdf_attachment_id
+
+        report_action = self.env.ref('etat_vente_journalier_facture.action_report_z', False) or self.env.ref('Etat_Vente_Journalier_facturé.action_report_z', False)
+        if not report_action:
+            raise UserError(_('L’action d’impression PDF du rapport n’est pas configurée.'))
+        if not self.env.ref(report_action.report_name, False):
+            alt_name = 'Etat_Vente_Journalier_facturé.report_z_document_template' if 'etat_vente_journalier_facture' in (report_action.report_name or '') else 'etat_vente_journalier_facture.report_z_document_template'
+            if self.env.ref(alt_name, False):
+                report_action.sudo().write({'report_name': alt_name, 'report_file': alt_name})
+
+        pdf_content, _ = self.env['ir.actions.report']._render_qweb_pdf(report_action.id, res_ids=self.ids)
+        filename = "%s.pdf" % self.name.replace('/', '_')
+        attachment = self.env['ir.attachment'].search([
+            ('res_model', '=', 'account.z.report'),
+            ('res_id', '=', self.id),
+            ('name', '=', filename),
+        ], limit=1)
+        if not attachment:
+            attachment = self.env['ir.attachment'].create({
+                'name': filename,
+                'type': 'binary',
+                'datas': base64.b64encode(pdf_content),
+                'res_model': 'account.z.report',
+                'res_id': self.id,
+                'mimetype': 'application/pdf',
+            })
+        self.with_context(_z_snapshot_write=True).write({'pdf_attachment_id': attachment.id})
+        return attachment
 
     def action_print_pdf(self):
         self.ensure_one()
-        report_action = self.env.ref('etat_vente_journalier_facture.action_report_z', False) or self.env.ref('Etat_Vente_Journalier_facturé.action_report_z', False)
-        if report_action:
-            if not self.env.ref(report_action.report_name, False):
-                alt_name = 'Etat_Vente_Journalier_facturé.report_z_document_template' if 'etat_vente_journalier_facture' in (report_action.report_name or '') else 'etat_vente_journalier_facture.report_z_document_template'
-                if self.env.ref(alt_name, False):
-                    report_action.sudo().write({'report_name': alt_name, 'report_file': alt_name})
-            return report_action.report_action(self)
-        if self.pdf_attachment_id:
-            return {
-                'type': 'ir.actions.act_url',
-                'url': '/web/content/?model=ir.attachment&id=%s&filename_field=name&field=datas&download=true' % self.pdf_attachment_id.id,
-                'target': 'self',
-            }
-        return False
+        if not self.pdf_attachment_id:
+            self._archive_pdf_snapshot()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/web/content/?model=ir.attachment&id=%s&filename_field=name&field=datas&download=true' % self.pdf_attachment_id.id,
+            'target': 'self',
+        }
 
     def action_export_excel(self):
         self.ensure_one()

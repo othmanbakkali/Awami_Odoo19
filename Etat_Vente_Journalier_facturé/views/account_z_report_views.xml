@@ -5,7 +5,7 @@
         <field name="name">account.z.report.tree</field>
         <field name="model">account.z.report</field>
         <field name="arch" type="xml">
-            <list string="Historique Rapports Z/X" create="false" edit="false">
+            <list string="Historique Rapports Z/X" create="false" edit="false" delete="false">
                 <field name="name"/>
                 <field name="report_type" decoration-info="report_type == 'x'" decoration-success="report_type == 'z'" widget="badge"/>
                 <field name="date_start"/>
@@ -32,6 +32,9 @@
                     <button name="action_print_pdf" string="Télécharger PDF" type="object" class="btn-primary" icon="fa-file-pdf-o"/>
                     <button name="action_export_excel" string="Exporter Excel" type="object" class="btn-secondary" icon="fa-file-excel-o"/>
                     <button name="action_export_csv" string="Exporter CSV" type="object" class="btn-secondary" icon="fa-file-code-o"/>
+                    <button name="action_unlock_period" string="Débloquer la période" type="object" class="btn-warning" icon="fa-unlock" groups="base.group_system" invisible="report_type != 'z' or period_unlocked"/>
+                    <button name="action_lock_period" string="Bloquer la période" type="object" class="btn-secondary" icon="fa-lock" groups="base.group_system" invisible="report_type != 'z' or not period_unlocked" confirm="La génération d’un nouveau rapport Z pour cette période sera de nouveau bloquée. Continuer ?"/>
+                    <button name="action_delete_period" string="Supprimer la période" type="object" class="btn-danger" icon="fa-trash" groups="base.group_system" invisible="report_type != 'z' or not period_unlocked" confirm="Tous les rapports Z et leurs PDF archivés pour cette société et cette période seront supprimés. La période pourra ensuite être recréée. Continuer ?"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -49,6 +52,7 @@
                             <field name="journal_id" readonly="1" invisible="not journal_id"/>
                             <field name="salesperson_id" readonly="1" invisible="not salesperson_id"/>
                             <field name="invoice_state" readonly="1"/>
+                            <field name="period_unlocked" groups="base.group_system" readonly="1" invisible="not period_unlocked"/>
                             <field name="company_id" readonly="1" groups="base.group_multi_company"/>
                         </group>
                         <group string="Informations de génération">
