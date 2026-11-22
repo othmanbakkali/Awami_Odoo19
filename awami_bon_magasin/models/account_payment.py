@@ -84,6 +84,18 @@ class AccountPayment(models.Model):
             elif not pay.payment_mode:
                 pay.payment_mode = 'especes'
 
+    @api.depends('payment_method_line_id', 'journal_id', 'payment_type')
+    def _compute_outstanding_account_id(self):
+        super()._compute_outstanding_account_id()
+        for pay in self:
+            if not pay.outstanding_account_id and pay.payment_type:
+                try:
+                    pay.outstanding_account_id = pay._get_outstanding_account(pay.payment_type)
+                except Exception:
+                    pass
+                if not pay.outstanding_account_id and pay.journal_id.default_account_id:
+                    pay.outstanding_account_id = pay.journal_id.default_account_id
+
     @api.onchange('partner_id')
     def _onchange_partner_id_check_client(self):
         if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
