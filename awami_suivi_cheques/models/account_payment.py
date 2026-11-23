@@ -71,6 +71,8 @@ class AccountPayment(models.Model):
             }
             if getattr(pay, 'bank_name', False):
                 vals['bank_name'] = pay.bank_name
+            if getattr(pay, 'check_image', False):
+                vals['check_image'] = pay.check_image
 
             # Si le paiement est payé, répercuter
             if pay.state == 'paid' or getattr(pay, 'is_marked_paid', False):
@@ -109,7 +111,7 @@ class AccountPayment(models.Model):
         check_related_fields = [
             'payment_mode', 'check_number', 'check_client_name',
             'check_date_due', 'bank_name', 'amount', 'date',
-            'partner_id', 'is_marked_paid', 'state'
+            'partner_id', 'is_marked_paid', 'state', 'check_image'
         ]
         if any(f in vals for f in check_related_fields):
             self._sync_check_tracking()

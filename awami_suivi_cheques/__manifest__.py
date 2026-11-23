@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Awami - Suivi des Chèques et Effets',
-    'version': '19.0.1.0.2',
+    'version': '19.0.1.0.3',
     'category': 'Accounting/Accounting',
     'summary': 'Module de monitoring et suivi des chèques et effets : Payé, Impayé, Date d\'échéance, Retour banque, à base des paiements.',
     'description': """

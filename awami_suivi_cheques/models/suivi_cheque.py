@@ -59,6 +59,13 @@ class SuiviCheque(models.Model):
         help="Numéro de compte bancaire ou RIB du tireur."
     )
 
+    check_image = fields.Binary(
+        string="Photo du Chèque / Effet",
+        attachment=True,
+        copy=False,
+        help="Photo ou scan du chèque ou de l'effet commercial."
+    )
+
     amount = fields.Monetary(
         string="Montant",
         required=True,
@@ -238,6 +245,14 @@ class SuiviCheque(models.Model):
             if vals.get('name', _('Nouveau')) == _('Nouveau'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('suivi.cheque') or '/'
         return super().create(vals_list)
+
+    def write(self, vals):
+        res = super().write(vals)
+        if 'check_image' in vals and vals['check_image']:
+            for rec in self:
+                if rec.payment_id and not rec.payment_id.check_image:
+                    rec.payment_id.sudo().write({'check_image': vals['check_image']})
+        return res
 
     # -------------------------------------------------------------------------
     # WORKFLOW ACTIONS

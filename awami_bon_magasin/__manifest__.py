@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Awami - Bon Magasin & Facturation A5',
-    'version': '19.0.1.3.3',
+    'version': '19.0.1.3.4',
     'category': 'Sales/Sales',
     'summary': 'Renommage Devis en Bon Magasin, Facture A5 double exemplaire (A4), 2 Pages A5 (Client & Contrôle) et exemplaire unique (Format Papier A5), Multi-UoM, modes de paiement Chèque et Effet, validation manuelle statut Payé.',
     'description': """

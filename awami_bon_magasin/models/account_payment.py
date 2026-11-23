@@ -42,6 +42,13 @@ class AccountPayment(models.Model):
         help="Date d'échéance de l'effet ou date d'encaissement prévue du chèque."
     )
 
+    check_image = fields.Binary(
+        string="Photo du Chèque / Effet",
+        attachment=True,
+        copy=False,
+        help="Photo ou scan du chèque ou de l'effet commercial."
+    )
+
     @api.depends('company_id', 'partner_id', 'payment_mode')
     def _compute_journal_id(self):
         super()._compute_journal_id()
@@ -105,6 +112,7 @@ class AccountPayment(models.Model):
             self.check_client_name = False
             self.check_number = False
             self.check_date_due = False
+            self.check_image = False
 
     @api.onchange('payment_mode')
     def _onchange_payment_mode_check(self):
@@ -115,6 +123,7 @@ class AccountPayment(models.Model):
             self.check_client_name = False
             self.check_number = False
             self.check_date_due = False
+            self.check_image = False
 
         company = self.company_id or self.env.company
         domain = self.env['account.journal']._check_company_domain(company)
@@ -227,6 +236,12 @@ class AccountPaymentRegister(models.TransientModel):
     check_number = fields.Char(string="N° de série / Chèque / Effet", copy=False)
     check_client_name = fields.Char(string="Nom du client (Chèque / Effet)", copy=False)
     check_date_due = fields.Date(string="Date d'échéance", copy=False)
+    check_image = fields.Binary(
+        string="Photo du Chèque / Effet",
+        attachment=True,
+        copy=False,
+        help="Photo ou scan du chèque ou de l'effet commercial."
+    )
 
     def _get_active_move(self):
         self.ensure_one()
@@ -303,6 +318,7 @@ class AccountPaymentRegister(models.TransientModel):
                 wiz.check_client_name = False
                 wiz.check_number = False
                 wiz.check_date_due = False
+                wiz.check_image = False
 
     @api.onchange('partner_id')
     def _onchange_partner_id_check_client(self):
@@ -313,6 +329,7 @@ class AccountPaymentRegister(models.TransientModel):
             self.check_client_name = False
             self.check_number = False
             self.check_date_due = False
+            self.check_image = False
 
     @api.onchange('payment_mode')
     def _onchange_payment_mode_check(self):
@@ -323,6 +340,7 @@ class AccountPaymentRegister(models.TransientModel):
             self.check_client_name = False
             self.check_number = False
             self.check_date_due = False
+            self.check_image = False
 
         company = self.company_id or self.env.company
         domain = self.env['account.journal']._check_company_domain(company)
@@ -365,10 +383,12 @@ class AccountPaymentRegister(models.TransientModel):
             payment_vals['check_number'] = self.check_number or False
             payment_vals['check_client_name'] = self.check_client_name or False
             payment_vals['check_date_due'] = self.check_date_due or False
+            payment_vals['check_image'] = self.check_image or False
         else:
             payment_vals['check_number'] = False
             payment_vals['check_client_name'] = False
             payment_vals['check_date_due'] = False
+            payment_vals['check_image'] = False
         return payment_vals
 
     def _create_payments(self):

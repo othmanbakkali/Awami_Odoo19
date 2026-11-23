@@ -112,6 +112,7 @@
                         <strong>Attention :</strong> Ce chèque a dépassé sa date d'échéance (<field name="check_date_due" readonly="1"/>).
                     </div>
 
+                    <field name="check_image" widget="image" class="oe_avatar" options="{'preview_image': 'check_image'}"/>
                     <div class="oe_title">
                         <span class="o_primary_label">
                             <field name="payment_mode" widget="radio" options="{'horizontal': true}"/>
@@ -187,6 +188,13 @@
                             </field>
                         </page>
 
+                        <!-- Onglet Photo du Chèque / Effet -->
+                        <page string="Photo du Document" name="page_image">
+                            <group>
+                                <field name="check_image" widget="image" string="Photo / Scan" nolabel="1"/>
+                            </group>
+                        </page>
+
                         <!-- Onglet Notes -->
                         <page string="Notes Internes" name="page_notes">
                             <field name="notes" placeholder="Notes ou observations internes..."/>
@@ -221,6 +229,7 @@
                 <field name="due_status"/>
                 <field name="payment_mode"/>
                 <field name="check_type"/>
+                <field name="check_image"/>
                 <templates>
                     <t t-name="card">
                         <div class="d-flex flex-column gap-1">
@@ -234,6 +243,10 @@
                                 <span t-else="" class="badge bg-light text-dark">
                                     Chèque
                                 </span>
+                            </div>
+
+                            <div t-if="record.check_image.raw_value" class="text-center my-1">
+                                <field name="check_image" widget="image" class="img-thumbnail" style="max-height: 80px; max-width: 100%; object-fit: contain;"/>
                             </div>
 
                             <div class="text-truncate">
