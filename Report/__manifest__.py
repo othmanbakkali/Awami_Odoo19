@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Rapport Journalier des Ventes, Dépenses et Charges',
-    'version': '19.0.1.0.6',
+    'version': '19.0.1.0.7',
     'category': 'Accounting/Accounting',
     'summary': 'Génération des rapports journaliers de vente avec détail des dépenses, charges, trésorerie et résultat net',
     'description': """

@@ -488,12 +488,28 @@ class AccountSalesExpenseReport(models.Model):
                             if pmode in ('Chèque', 'Effet'):
                                 p_num = ''
                                 p_client = ''
+                                p_due = False
                                 if pay and pay.exists():
                                     p_num = getattr(pay, 'check_number', False) or getattr(pay, 'memo', False) or check_num
                                     p_client = getattr(pay, 'check_client_name', False) or (pay.partner_id.name if pay.partner_id else check_client)
+                                    p_due = getattr(pay, 'check_date_due', False) or check_due
                                 else:
                                     p_num = check_num
                                     p_client = check_client
+                                    p_due = check_due
+
+                                due_disp = p_due.strftime('%d/%m/%Y') if hasattr(p_due, 'strftime') else (str(p_due) if p_due else '-')
+                                cheques_list.append({
+                                    'date': move.date,
+                                    'invoice_name': move.name or '/',
+                                    'partner': move.partner_id.name or 'Client divers',
+                                    'check_client_name': p_client or (move.partner_id.name or '-'),
+                                    'check_number': p_num or '-',
+                                    'check_date_due': due_disp,
+                                    'amount': amt,
+                                    'mode': pmode,
+                                    'payment_state': 'Encaissé',
+                                })
 
                     except Exception:
                         pass
@@ -588,71 +604,21 @@ class AccountSalesExpenseReport(models.Model):
                     'invoice_name': invoice_label,
                 })
 
-            # TABLE DES CHÈQUES & EFFETS : UNE SEULE LIGNE PAR CHÈQUE PHYSIQUE (MONTANT DU CHÈQUE)
-            if pay_mode_label in ('Chèque', 'Effet'):
-                pay_key = pay.id
-                if pay_key not in cheques_seen:
-                    cheques_seen.add(pay_key)
-                    if valid_reconciled_invs:
-                        inv_names = ', '.join([m.name for m in valid_reconciled_invs if m.name])
-                        total_inv_alloc = sum(self._get_reconciled_amount_between(pay, inv) for inv in valid_reconciled_invs)
-                        state_str = f"Encaissé ({inv_names})"
-                        inv_display = inv_names
-                    else:
-                        continue
-
+                if pay_mode_label in ('Chèque', 'Effet') and signed_alloc > 0.005:
                     cheques_list.append({
                         'date': pay.date,
-                        'invoice_name': inv_display,
-                        'partner': pay.partner_id.name or 'Client divers',
-                        'check_client_name': chk_client or pay.partner_id.name or '-',
+                        'invoice_name': invoice_label,
+                        'partner': inv.partner_id.name or pay.partner_id.name or 'Client divers',
+                        'check_client_name': chk_client or (pay.partner_id.name if pay.partner_id else '-'),
                         'check_number': chk_num or '-',
                         'check_date_due': chk_due_str or '-',
-                        'amount': pay.amount,
+                        'amount': signed_alloc,
                         'mode': pay_mode_label,
-                        'payment_state': state_str
+                        'payment_state': 'Encaissé',
                     })
 
-        # Ajouter les factures du jour en chèque/effet non encore lettrées à un paiement
-        for move in sale_moves:
-            inv_mode = self._determine_move_payment_mode(move)
-            if inv_mode in ('Chèque', 'Effet'):
-                linked_p = (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])).filtered(lambda p: p.id in cheques_seen)
-                if not linked_p and move.id not in cheques_seen:
-                    has_prior_check = False
-                    if move.invoice_payments_widget:
-                        try:
-                            wj = move.invoice_payments_widget
-                            if isinstance(wj, (bytes, bytearray)):
-                                wj = wj.decode('utf-8')
-                            wjd = json.loads(wj) if isinstance(wj, str) else wj
-                            for item in wjd.get('content', []):
-                                p_id = item.get('account_payment_id')
-                                if p_id:
-                                    p_obj = self.env['account.payment'].browse(p_id)
-                                    if p_obj.exists() and p_obj.date < self.date_start:
-                                        has_prior_check = True
-                                        break
-                        except Exception:
-                            pass
-                    if not has_prior_check:
-                        cheques_seen.add(move.id)
-                        check_n = getattr(move, 'check_number', False) or '-'
-                        check_c = getattr(move, 'check_client_name', False) or move.partner_id.name or '-'
-                        check_d = getattr(move, 'check_date_due', False)
-                        d_str = check_d.strftime('%d/%m/%Y') if hasattr(check_d, 'strftime') else (str(check_d) if check_d else '-')
-                        cheques_list.append({
-                            'date': move.date,
-                            'invoice_name': move.name or '/',
-                            'partner': move.partner_id.name or 'Client divers',
-                            'check_client_name': check_c,
-                            'check_number': check_n,
-                            'check_date_due': d_str,
-                            'amount': move.amount_total,
-                            'mode': inv_mode,
-                            'payment_state': payment_states_map.get(move.payment_state, move.payment_state or 'Non payé')
-                        })
-
+        # Trier la liste des chèques et effets par date puis par numéro de facture
+        cheques_list.sort(key=lambda c: (str(c['date']), c['invoice_name']))
 
         # ------------------- Traitement des Charges & Factures Fournisseurs -------------------
         for move in purchase_moves:

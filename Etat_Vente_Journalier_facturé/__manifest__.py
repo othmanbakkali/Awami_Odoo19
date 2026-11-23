@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Rapport des Ventes Journalier',
-    'version': '19.0.1.0.9',
+    'version': '19.0.1.0.10',
     'category': 'Accounting/Accounting',
     'summary': 'Rapport des Ventes journalier haute lisibilité : détail des chèques & effets, ventilation stricte des modes de paiement et exports complets',
     'description': """
