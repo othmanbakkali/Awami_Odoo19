@@ -419,11 +419,11 @@
                                     <tr>
                                         <th style="width: 8%; text-align: center; white-space: nowrap;">Date</th>
                                         <th style="width: 14%; white-space: nowrap;">N° Facture</th>
-                                        <th style="width: 17%;">Client</th>
-                                        <th style="width: 9%; text-align: center;">Règlement</th>
-                                        <th style="width: 17%; text-align: right; white-space: nowrap;">Total TTC</th>
-                                        <th style="width: 17%; text-align: right; white-space: nowrap;">Payé</th>
-                                        <th style="width: 18%; text-align: center; white-space: nowrap;">Statut</th>
+                                        <th style="width: 18%;">Client</th>
+                                        <th style="width: 12%; text-align: center;">Règlement</th>
+                                        <th style="width: 16%; text-align: right; white-space: nowrap;">Total TTC</th>
+                                        <th style="width: 16%; text-align: right; white-space: nowrap;">Payé</th>
+                                        <th style="width: 16%; text-align: center; white-space: nowrap;">Statut</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -442,7 +442,7 @@
                                             <!-- Client -->
                                             <td style="color: #2c1810; font-weight: 700; font-size: 8.5pt; word-break: break-word; padding: 4px 4px !important;">
                                                 <t t-esc="inv['partner']"/>
-                                                <t t-if="inv['payment_mode'] in ('Chèque', 'Effet') and inv.get('check_client_name') and inv['check_client_name'] != inv['partner']">
+                                                <t t-if="('Chèque' in (inv.get('payment_modes') or [inv['payment_mode']]) or 'Effet' in (inv.get('payment_modes') or [inv['payment_mode']])) and inv.get('check_client_name') and inv['check_client_name'] != inv['partner']">
                                                     <div style="font-size: 7.5pt; color: #6b5744; font-style: italic; font-weight: 600;">
                                                         (Titulaire : <t t-esc="inv['check_client_name']"/>)
                                                     </div>
@@ -451,14 +451,13 @@
 
                                             <!-- Mode de Règlement & Nom Client à côté si Banque, Chèque ou Effet -->
                                             <td style="text-align: center; padding: 3px 2px !important;">
-                                                <t t-if="inv['payment_mode'] == 'Espèces'">
-                                                    <span class="z-badge z-badge-especes">Espèces</span>
+                                                <t t-set="modes" t-value="inv.get('payment_modes') or [inv['payment_mode']]"/>
+                                                <t t-foreach="modes" t-as="m">
+                                                    <span t-attf-class="z-badge #{'z-badge-especes' if m == 'Espèces' else ('z-badge-virement' if m == 'Virement' else ('z-badge-cheque' if m == 'Chèque' else ('z-badge-effet' if m == 'Effet' else 'z-badge-autre')))}" style="margin: 1px 2px; display: inline-block;">
+                                                        <t t-esc="m"/>
+                                                    </span>
                                                 </t>
-                                                <t t-elif="inv['payment_mode'] == 'Virement'">
-                                                    <span class="z-badge z-badge-virement">Virement</span>
-                                                </t>
-                                                <t t-elif="inv['payment_mode'] == 'Chèque'">
-                                                    <span class="z-badge z-badge-cheque">Chèque</span>
+                                                <t t-if="'Chèque' in modes or 'Effet' in modes">
                                                     <div t-if="inv.get('check_client_name') and inv['check_client_name'] != inv['partner']" style="font-size: 7.5pt; color: #78350f; font-weight: 800; margin-top: 1px; line-height: 1.1;">
                                                         <t t-esc="inv['check_client_name']"/>
                                                     </div>
@@ -468,21 +467,6 @@
                                                     <div t-if="inv.get('check_date_due')" style="font-size: 7.5pt; color: #6b5744; font-weight: 600;">
                                                         Éch: <t t-esc="inv['check_date_due']"/>
                                                     </div>
-                                                </t>
-                                                <t t-elif="inv['payment_mode'] == 'Effet'">
-                                                    <span class="z-badge z-badge-effet">Effet</span>
-                                                    <div t-if="inv.get('check_client_name') and inv['check_client_name'] != inv['partner']" style="font-size: 7.5pt; color: #854d0e; font-weight: 800; margin-top: 1px; line-height: 1.1;">
-                                                        <t t-esc="inv['check_client_name']"/>
-                                                    </div>
-                                                    <div t-if="inv.get('check_number')" style="font-size: 7.5pt; color: #2c1810; font-weight: 700;">
-                                                        N° <t t-esc="inv['check_number']"/>
-                                                    </div>
-                                                    <div t-if="inv.get('check_date_due')" style="font-size: 7.5pt; color: #6b5744; font-weight: 600;">
-                                                        Éch: <t t-esc="inv['check_date_due']"/>
-                                                    </div>
-                                                </t>
-                                                <t t-else="">
-                                                    <span class="z-badge z-badge-autre"><t t-esc="inv['payment_mode']"/></span>
                                                 </t>
                                             </td>
 

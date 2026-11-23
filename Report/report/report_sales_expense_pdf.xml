@@ -532,11 +532,11 @@
                                 <tr>
                                     <th style="width: 8%; text-align: center; white-space: nowrap;">Date</th>
                                     <th style="width: 14%; white-space: nowrap;">Facture</th>
-                                    <th style="width: 17%;">Client</th>
-                                    <th style="width: 9%; text-align: center;">Règlement &amp; Réf</th>
-                                    <th style="width: 17%; text-align: right; white-space: nowrap;">Total TTC</th>
-                                    <th style="width: 17%; text-align: right; white-space: nowrap;">Payé</th>
-                                    <th style="width: 18%; text-align: center; white-space: nowrap;">Statut</th>
+                                    <th style="width: 18%;">Client</th>
+                                    <th style="width: 12%; text-align: center;">Règlement &amp; Réf</th>
+                                    <th style="width: 16%; text-align: right; white-space: nowrap;">Total TTC</th>
+                                    <th style="width: 16%; text-align: right; white-space: nowrap;">Payé</th>
+                                    <th style="width: 16%; text-align: center; white-space: nowrap;">Statut</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -549,14 +549,17 @@
                                         <td style="font-weight: 700; color: #543216; font-size: 8.5pt; white-space: nowrap;"><t t-esc="inv['name']"/></td>
                                         <td style="font-weight: 600; font-size: 8.5pt; word-break: break-word; color: #2c1810;"><t t-esc="inv['partner']"/></td>
                                         <td style="text-align: center; padding: 3px 2px;">
-                                            <span t-attf-class="badge #{'badge-especes' if inv['payment_mode'] == 'Espèces' else ('badge-virement' if inv['payment_mode'] == 'Virement' else ('badge-cheque' if inv['payment_mode'] == 'Chèque' else ('badge-effet' if inv['payment_mode'] == 'Effet' else 'badge-autre')))}">
-                                                <t t-esc="inv['payment_mode']"/>
-                                            </span>
-                                            <t t-if="inv['payment_mode'] in ('Chèque', 'Effet')">
+                                            <t t-set="modes" t-value="inv.get('payment_modes') or [inv['payment_mode']]"/>
+                                            <t t-foreach="modes" t-as="m">
+                                                <span t-attf-class="badge #{'badge-especes' if m == 'Espèces' else ('badge-virement' if m == 'Virement' else ('badge-cheque' if m == 'Chèque' else ('badge-effet' if m == 'Effet' else 'badge-autre')))}" style="margin: 1px 2px; display: inline-block;">
+                                                    <t t-esc="m"/>
+                                                </span>
+                                            </t>
+                                            <t t-if="'Chèque' in modes or 'Effet' in modes">
                                                 <div t-if="inv.get('check_number')" style="font-size: 7.5pt; color: #2c1810; margin-top: 1px;">
                                                     N°: <strong t-esc="inv['check_number']"/>
                                                 </div>
-                                                <div t-if="inv.get('check_client_name') and inv['check_client_name'] != inv['partner']" style="font-size: 7.5pt; color: #{'#78350f' if inv['payment_mode'] == 'Chèque' else '#854d0e'};">
+                                                <div t-if="inv.get('check_client_name') and inv['check_client_name'] != inv['partner']" style="font-size: 7.5pt; color: #{'#78350f' if 'Chèque' in modes else '#854d0e'};">
                                                     Tireur: <span t-esc="inv['check_client_name']"/>
                                                 </div>
                                                 <div t-if="inv.get('check_date_due')" style="font-size: 7.5pt; color: #6b5744;">

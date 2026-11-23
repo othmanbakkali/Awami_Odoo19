@@ -354,50 +354,67 @@ class AccountSalesExpenseReport(models.Model):
             paid_amount = max(0.0, total_ttc - move.amount_residual)
             residual = move.amount_residual
 
-            # Recherche du paiement lié (account.payment) pour extraire mode réel et informations de chèque
-            linked_pay = False
+            # Détection de tous les modes de règlement réels liés à la facture
+            modes_list = []
+            check_client = ''
+            check_num = ''
+            check_due = False
+
+            wjson = move.invoice_payments_widget
+            if wjson:
+                try:
+                    if isinstance(wjson, (bytes, bytearray)):
+                        wjson = wjson.decode('utf-8')
+                    wd = json.loads(wjson) if isinstance(wjson, str) else wjson
+                    for item in wd.get('content', []):
+                        pid = item.get('account_payment_id')
+                        p = self.env['account.payment'].browse(pid) if pid else False
+                        m = self._determine_move_payment_mode(move, pay_info=item, payment=p)
+                        if m and m not in modes_list:
+                            modes_list.append(m)
+                except Exception:
+                    pass
+
             for p in (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])):
                 if p.exists() and p.company_id == self.company_id:
-                    linked_pay = p
-                    break
-            if not linked_pay:
-                wjson = move.invoice_payments_widget
-                if wjson:
+                    m = self._determine_move_payment_mode(move, payment=p)
+                    if m and m not in modes_list:
+                        modes_list.append(m)
+
+            if not modes_list:
+                modes_list = [self._determine_move_payment_mode(move)]
+
+            mode = ' + '.join(modes_list)
+
+            # Recherche des informations de chèque / effet si présent
+            if any(m in ('Chèque', 'Effet') for m in modes_list):
+                for p in (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])):
+                    if p.exists() and p.company_id == self.company_id:
+                        p_mode = self._determine_move_payment_mode(move, payment=p)
+                        if p_mode in ('Chèque', 'Effet'):
+                            check_client = getattr(p, 'check_client_name', False) or getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
+                            check_num = getattr(p, 'check_number', False) or getattr(p, 'memo', False) or getattr(move, 'check_number', False) or ''
+                            check_due = getattr(p, 'check_date_due', False) or getattr(move, 'check_date_due', False) or False
+                            break
+                if not check_num and not check_client and wjson:
                     try:
-                        if isinstance(wjson, (bytes, bytearray)):
-                            wjson = wjson.decode('utf-8')
                         wd = json.loads(wjson) if isinstance(wjson, str) else wjson
                         for item in wd.get('content', []):
                             pid = item.get('account_payment_id')
-                            if pid:
-                                p = self.env['account.payment'].browse(pid)
-                                if p.exists() and p.company_id == self.company_id:
-                                    linked_pay = p
-                                    break
+                            p = self.env['account.payment'].browse(pid) if pid else False
+                            p_mode = self._determine_move_payment_mode(move, pay_info=item, payment=p)
+                            if p_mode in ('Chèque', 'Effet'):
+                                if p and p.exists():
+                                    check_client = getattr(p, 'check_client_name', False) or getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
+                                    check_num = getattr(p, 'check_number', False) or getattr(p, 'memo', False) or getattr(move, 'check_number', False) or ''
+                                    check_due = getattr(p, 'check_date_due', False) or getattr(move, 'check_date_due', False) or False
+                                break
                     except Exception:
                         pass
-
-
-            if linked_pay:
-                mode = self._determine_move_payment_mode(move, payment=linked_pay)
-                if mode in ('Chèque', 'Effet'):
-                    check_client = getattr(linked_pay, 'check_client_name', False) or getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
-                    check_num = getattr(linked_pay, 'check_number', False) or getattr(move, 'check_number', False) or ''
-                    check_due = getattr(linked_pay, 'check_date_due', False) or getattr(move, 'check_date_due', False) or False
-                else:
-                    check_client = ''
-                    check_num = ''
-                    check_due = False
-            else:
-                mode = self._determine_move_payment_mode(move)
-                if mode in ('Chèque', 'Effet'):
+                if not check_num and not check_client:
                     check_client = getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
                     check_num = getattr(move, 'check_number', False) or ''
                     check_due = getattr(move, 'check_date_due', False) or False
-                else:
-                    check_client = ''
-                    check_num = ''
-                    check_due = False
 
             due_str = check_due.strftime('%d/%m/%Y') if hasattr(check_due, 'strftime') else (str(check_due) if check_due else '')
 
@@ -432,6 +449,7 @@ class AccountSalesExpenseReport(models.Model):
                 'date': move.date,
                 'partner': move.partner_id.name or 'Client divers',
                 'payment_mode': mode,
+                'payment_modes': modes_list,
                 'check_client_name': check_client,
                 'check_number': check_num,
                 'check_date_due': due_str,
