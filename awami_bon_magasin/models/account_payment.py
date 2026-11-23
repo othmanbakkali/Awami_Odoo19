@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
+from odoo.exceptions import UserError, ValidationError
 
 class AccountPayment(models.Model):
     _inherit = 'account.payment'
@@ -26,6 +27,13 @@ class AccountPayment(models.Model):
         tracking=True,
         copy=False,
         help="Numéro de série du chèque ou de l'effet commercial (Traite/LCN) ou référence de virement."
+    )
+
+    transfer_order_number = fields.Char(
+        string="N° Ordre de Virement",
+        tracking=True,
+        copy=False,
+        help="Numéro ou référence de l'ordre de virement bancaire."
     )
 
     check_client_name = fields.Char(
@@ -108,22 +116,40 @@ class AccountPayment(models.Model):
         if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
             if self.partner_id and not self.check_client_name:
                 self.check_client_name = self.partner_id.name
+            self.transfer_order_number = False
+        elif self.payment_mode == 'virement':
+            self.check_client_name = False
+            self.check_date_due = False
+            self.check_image = False
+            if self.transfer_order_number:
+                self.check_number = self.transfer_order_number
         else:
             self.check_client_name = False
             self.check_number = False
             self.check_date_due = False
             self.check_image = False
+            self.transfer_order_number = False
 
     @api.onchange('payment_mode')
     def _onchange_payment_mode_check(self):
         if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
             if self.partner_id and not self.check_client_name:
                 self.check_client_name = self.partner_id.name
+            self.transfer_order_number = False
+        elif self.payment_mode == 'virement':
+            self.check_client_name = False
+            self.check_date_due = False
+            self.check_image = False
+            if self.transfer_order_number:
+                self.check_number = self.transfer_order_number
+            else:
+                self.check_number = False
         else:
             self.check_client_name = False
             self.check_number = False
             self.check_date_due = False
             self.check_image = False
+            self.transfer_order_number = False
 
         company = self.company_id or self.env.company
         domain = self.env['account.journal']._check_company_domain(company)
@@ -143,6 +169,11 @@ class AccountPayment(models.Model):
             j = self.env['account.journal'].search([*domain, ('type', '=', 'bank'), ('name', 'not ilike', 'chèque'), ('name', 'not ilike', 'effet')], limit=1)
             if j:
                 self.journal_id = j
+
+    @api.onchange('transfer_order_number')
+    def _onchange_transfer_order_number(self):
+        if self.payment_mode == 'virement' and self.transfer_order_number:
+            self.check_number = self.transfer_order_number
 
     @api.onchange('journal_id')
     def _onchange_journal_id_sync_mode(self):
@@ -182,6 +213,35 @@ class AccountPayment(models.Model):
         self.write({'is_marked_paid': False})
         return super().unlink()
 
+    def action_post(self):
+        for pay in self:
+            if pay.payment_mode == 'virement' and not (pay.transfer_order_number or pay.check_number):
+                raise UserError(_("Le numéro d'ordre de virement est obligatoire pour valider un paiement par virement."))
+            if pay.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque') and not pay.check_number:
+                raise UserError(_("Le numéro de chèque / effet est obligatoire pour valider ce mode de règlement."))
+            if pay.payment_mode == 'virement' and pay.transfer_order_number and not pay.check_number:
+                pay.check_number = pay.transfer_order_number
+        return super().action_post()
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('transfer_order_number') and not vals.get('check_number'):
+                vals['check_number'] = vals['transfer_order_number']
+            elif vals.get('check_number') and not vals.get('transfer_order_number') and vals.get('payment_mode') == 'virement':
+                vals['transfer_order_number'] = vals['check_number']
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get('transfer_order_number') and 'check_number' not in vals:
+            vals['check_number'] = vals['transfer_order_number']
+        elif vals.get('check_number') and 'transfer_order_number' not in vals:
+            for pay in self:
+                if (vals.get('payment_mode') or pay.payment_mode) == 'virement':
+                    vals['transfer_order_number'] = vals['check_number']
+                    break
+        return super().write(vals)
+
     @api.depends('is_marked_paid')
     def _compute_state(self):
         super()._compute_state()
@@ -204,8 +264,12 @@ class AccountPayment(models.Model):
             vals = {}
             if pay.payment_mode:
                 vals['payment_mode'] = pay.payment_mode
+            if pay.transfer_order_number:
+                vals['transfer_order_number'] = pay.transfer_order_number
             if pay.check_number:
                 vals['check_number'] = pay.check_number
+            elif pay.transfer_order_number:
+                vals['check_number'] = pay.transfer_order_number
             if pay.check_client_name:
                 vals['check_client_name'] = pay.check_client_name
             if pay.check_date_due:
@@ -234,6 +298,7 @@ class AccountPaymentRegister(models.TransientModel):
     ], string="Mode de règlement", compute="_compute_payment_mode", store=True, readonly=False, default='especes')
 
     check_number = fields.Char(string="N° de série / Chèque / Effet", copy=False)
+    transfer_order_number = fields.Char(string="N° Ordre de Virement", copy=False)
     check_client_name = fields.Char(string="Nom du client (Chèque / Effet)", copy=False)
     check_date_due = fields.Date(string="Date d'échéance", copy=False)
     check_image = fields.Binary(
@@ -302,9 +367,10 @@ class AccountPaymentRegister(models.TransientModel):
                 else:
                     wiz.payment_mode = 'especes'
 
-            # Pré-remplissage des informations de chèque / tiers si disponibles et applicables
+            # Pré-remplissage des informations de chèque / tiers / virement si disponibles
             active_move = wiz._get_active_move()
             if wiz.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
+                wiz.transfer_order_number = False
                 if active_move:
                     if not wiz.check_client_name:
                         wiz.check_client_name = getattr(active_move, 'check_client_name', False) or (active_move.partner_id.name if active_move.partner_id else '')
@@ -314,33 +380,60 @@ class AccountPaymentRegister(models.TransientModel):
                         wiz.check_date_due = active_move.check_date_due
                 elif wiz.partner_id and not wiz.check_client_name:
                     wiz.check_client_name = wiz.partner_id.name
+            elif wiz.payment_mode == 'virement':
+                wiz.check_client_name = False
+                wiz.check_date_due = False
+                wiz.check_image = False
+                if active_move:
+                    if not wiz.transfer_order_number:
+                        wiz.transfer_order_number = getattr(active_move, 'transfer_order_number', False) or getattr(active_move, 'check_number', False) or ''
+                    wiz.check_number = wiz.transfer_order_number
             else:
                 wiz.check_client_name = False
                 wiz.check_number = False
                 wiz.check_date_due = False
                 wiz.check_image = False
+                wiz.transfer_order_number = False
 
     @api.onchange('partner_id')
     def _onchange_partner_id_check_client(self):
         if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
             if self.partner_id and not self.check_client_name:
                 self.check_client_name = self.partner_id.name
+            self.transfer_order_number = False
+        elif self.payment_mode == 'virement':
+            self.check_client_name = False
+            self.check_date_due = False
+            self.check_image = False
+            if self.transfer_order_number:
+                self.check_number = self.transfer_order_number
         else:
             self.check_client_name = False
             self.check_number = False
             self.check_date_due = False
             self.check_image = False
+            self.transfer_order_number = False
 
     @api.onchange('payment_mode')
     def _onchange_payment_mode_check(self):
         if self.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque'):
             if self.partner_id and not self.check_client_name:
                 self.check_client_name = self.partner_id.name
+            self.transfer_order_number = False
+        elif self.payment_mode == 'virement':
+            self.check_client_name = False
+            self.check_date_due = False
+            self.check_image = False
+            if self.transfer_order_number:
+                self.check_number = self.transfer_order_number
+            else:
+                self.check_number = False
         else:
             self.check_client_name = False
             self.check_number = False
             self.check_date_due = False
             self.check_image = False
+            self.transfer_order_number = False
 
         company = self.company_id or self.env.company
         domain = self.env['account.journal']._check_company_domain(company)
@@ -360,6 +453,11 @@ class AccountPaymentRegister(models.TransientModel):
             j = self.env['account.journal'].search([*domain, ('type', '=', 'bank'), ('name', 'not ilike', 'chèque'), ('name', 'not ilike', 'effet')], limit=1)
             if j:
                 self.journal_id = j
+
+    @api.onchange('transfer_order_number')
+    def _onchange_transfer_order_number(self):
+        if self.payment_mode == 'virement' and self.transfer_order_number:
+            self.check_number = self.transfer_order_number
 
     @api.onchange('journal_id')
     def _onchange_journal_id_sync_mode(self):
@@ -384,14 +482,28 @@ class AccountPaymentRegister(models.TransientModel):
             payment_vals['check_client_name'] = self.check_client_name or False
             payment_vals['check_date_due'] = self.check_date_due or False
             payment_vals['check_image'] = self.check_image or False
+            payment_vals['transfer_order_number'] = False
+        elif self.payment_mode == 'virement':
+            ov_num = self.transfer_order_number or self.check_number or False
+            payment_vals['transfer_order_number'] = ov_num
+            payment_vals['check_number'] = ov_num
+            payment_vals['check_client_name'] = False
+            payment_vals['check_date_due'] = False
+            payment_vals['check_image'] = False
         else:
             payment_vals['check_number'] = False
             payment_vals['check_client_name'] = False
             payment_vals['check_date_due'] = False
             payment_vals['check_image'] = False
+            payment_vals['transfer_order_number'] = False
         return payment_vals
 
     def _create_payments(self):
+        for wiz in self:
+            if wiz.payment_mode == 'virement' and not (wiz.transfer_order_number or wiz.check_number):
+                raise UserError(_("Le numéro d'ordre de virement est obligatoire pour valider un paiement par virement."))
+            if wiz.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque') and not wiz.check_number:
+                raise UserError(_("Le numéro de chèque / effet est obligatoire pour valider ce mode de règlement."))
         payments = super()._create_payments()
         moves = self.line_ids.move_id
         vals = {}
@@ -401,13 +513,28 @@ class AccountPaymentRegister(models.TransientModel):
             vals['check_number'] = self.check_number or False
             vals['check_client_name'] = self.check_client_name or False
             vals['check_date_due'] = self.check_date_due or False
+            vals['transfer_order_number'] = False
+        elif self.payment_mode == 'virement':
+            ov_num = self.transfer_order_number or self.check_number or False
+            vals['transfer_order_number'] = ov_num
+            vals['check_number'] = ov_num
+            vals['check_client_name'] = False
+            vals['check_date_due'] = False
         else:
             vals['check_number'] = False
             vals['check_client_name'] = False
             vals['check_date_due'] = False
+            vals['transfer_order_number'] = False
         if vals:
             for move in moves:
                 if move.is_invoice(include_receipts=True):
                     move.sudo().write(vals)
         return payments
 
+    def action_create_payments(self):
+        for wiz in self:
+            if wiz.payment_mode == 'virement' and not (wiz.transfer_order_number or wiz.check_number):
+                raise UserError(_("Le numéro d'ordre de virement est obligatoire pour valider un paiement par virement."))
+            if wiz.payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque') and not wiz.check_number:
+                raise UserError(_("Le numéro de chèque / effet est obligatoire pour valider ce mode de règlement."))
+        return super().action_create_payments()

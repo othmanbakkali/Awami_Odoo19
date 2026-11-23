@@ -22,6 +22,13 @@ class AccountMove(models.Model):
         help="Numéro de série du chèque ou de l'effet commercial (Traite/LCN)."
     )
 
+    transfer_order_number = fields.Char(
+        string="N° Ordre de Virement",
+        tracking=True,
+        copy=False,
+        help="Numéro ou référence de l'ordre de virement bancaire."
+    )
+
     check_client_name = fields.Char(
         string="Nom du client (Chèque / Effet)",
         tracking=True,
@@ -100,8 +107,19 @@ class AccountMove(models.Model):
         return self.payment_mode or 'especes'
 
     def _get_effective_check_number(self):
-        """Retourne le numéro de chèque/effet issu du paiement ou de la facture."""
+        """Retourne le numéro de chèque/effet ou ordre de virement issu du paiement ou de la facture."""
         self.ensure_one()
+        if self.payment_mode == 'virement':
+            if self.transfer_order_number:
+                return self.transfer_order_number
+            if self.check_number:
+                return self.check_number
+            for pay in self.matched_payment_ids | self.reconciled_payment_ids:
+                if getattr(pay, 'transfer_order_number', False):
+                    return pay.transfer_order_number
+                if getattr(pay, 'check_number', False):
+                    return pay.check_number
+            return ''
         if self.payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque'):
             return ''
         if self.check_number:
@@ -160,7 +178,10 @@ class AccountMove(models.Model):
                     if pay and pay.exists():
                         mode_label = dict(pay._fields['payment_mode'].selection).get(pay.payment_mode) or pay.payment_method_line_id.name or p.get('journal_name') or 'Règlement'
                         details = []
-                        if pay.check_number:
+                        if getattr(pay, 'transfer_order_number', False) or (pay.payment_mode == 'virement' and pay.check_number):
+                            ov_val = getattr(pay, 'transfer_order_number', False) or pay.check_number
+                            details.append(f"N° OV: {ov_val}")
+                        elif pay.check_number:
                             details.append(f"N° {pay.check_number}")
                         if pay.check_client_name and pay.check_client_name != self.partner_id.name:
                             details.append(f"Émetteur: {pay.check_client_name}")
@@ -188,7 +209,10 @@ class AccountMove(models.Model):
             check_client = self._get_effective_check_client_name()
             check_due = self._get_effective_check_date_due()
             if check_num:
-                details.append(f"N° {check_num}")
+                if eff_mode == 'virement':
+                    details.append(f"N° OV: {check_num}")
+                else:
+                    details.append(f"N° {check_num}")
             if check_client and check_client != self.partner_id.name:
                 details.append(f"Émetteur: {check_client}")
             if check_due:

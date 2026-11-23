@@ -17,8 +17,13 @@
                 <field name="check_number" 
                        string="N° de Chèque / Effet" 
                        placeholder="Ex: CH-0012345 / 7654321"
-                       invisible="payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque', 'virement')" 
+                       invisible="payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque')" 
                        required="payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque')"/>
+                <field name="transfer_order_number" 
+                       string="N° Ordre de Virement" 
+                       placeholder="Ex: OV-123456 / Ref virement"
+                       invisible="payment_mode != 'virement'" 
+                       required="payment_mode == 'virement'"/>
                 <field name="check_client_name" 
                        string="Auteur / Émetteur du Chèque" 
                        placeholder="Nom figurant sur le chèque ou l'effet"
@@ -46,8 +51,13 @@
                 <field name="check_number" 
                        string="N° de Chèque / Effet" 
                        placeholder="Ex: CH-0012345 / 7654321"
-                       invisible="payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque', 'virement')" 
+                       invisible="payment_mode not in ('cheque', 'effet', 'traite', 'effet_cheque')" 
                        required="payment_mode in ('cheque', 'effet', 'traite', 'effet_cheque')"/>
+                <field name="transfer_order_number" 
+                       string="N° Ordre de Virement" 
+                       placeholder="Ex: OV-123456 / Ref virement"
+                       invisible="payment_mode != 'virement'" 
+                       required="payment_mode == 'virement'"/>
                 <field name="check_client_name" 
                        string="Auteur / Émetteur du Chèque" 
                        placeholder="Nom figurant sur le chèque ou l'effet"
@@ -74,6 +84,7 @@
                 <field name="payment_method_line_id" string="Mode de paiement" optional="show"/>
                 <field name="payment_mode" string="Règlement" optional="show"/>
                 <field name="check_number" string="N° Chèque / Effet" optional="hide"/>
+                <field name="transfer_order_number" string="N° Ordre Virement" optional="show"/>
                 <field name="check_client_name" string="Auteur Chèque" optional="hide"/>
             </xpath>
         </field>

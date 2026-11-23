@@ -21,6 +21,13 @@ class SaleOrder(models.Model):
         help="Numéro de série du chèque ou de l'effet commercial (Traite/LCN)."
     )
 
+    transfer_order_number = fields.Char(
+        string="N° Ordre de Virement",
+        tracking=True,
+        copy=False,
+        help="Numéro ou référence de l'ordre de virement bancaire."
+    )
+
     check_client_name = fields.Char(
         string="Nom du client (Chèque / Effet)",
         tracking=True,
@@ -135,6 +142,10 @@ class SaleOrder(models.Model):
         invoice_vals = super(SaleOrder, self)._prepare_invoice()
         if self.payment_mode:
             invoice_vals['payment_mode'] = self.payment_mode
+        if self.transfer_order_number:
+            invoice_vals['transfer_order_number'] = self.transfer_order_number
+            if not self.check_number:
+                invoice_vals['check_number'] = self.transfer_order_number
         if self.check_number:
             invoice_vals['check_number'] = self.check_number
         if self.check_client_name:

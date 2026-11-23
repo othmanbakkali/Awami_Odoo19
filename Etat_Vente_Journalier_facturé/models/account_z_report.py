@@ -357,98 +357,155 @@ class AccountZReport(models.Model):
             total_untaxed += move.amount_untaxed_signed
             total_tax += move.amount_tax_signed
             total_total += move.amount_total_signed
-            total_residual += move.amount_residual_signed
             
-            paid_amount = move.amount_total_signed - move.amount_residual_signed
+            # Traçabilité temporelle rigoureuse des règlements :
+            # Ne prendre en compte que les règlements intervenus au plus tard à date_end
+            paid_as_of_end = 0.0
+            paid_in_period = 0.0
+            pay_dates_set = []
+            reconciled_modes = []
+            valid_period_payments = []
             
-            # Détection de tous les modes de règlement réels liés à la facture
-            modes_list = []
-            check_client = ''
-            check_num = ''
-            check_due = False
-
+            chk_num_pay = ''
+            chk_client_pay = ''
+            chk_due_pay = False
+            
             wjson = move.invoice_payments_widget
+            widget_content = []
             if wjson:
                 try:
                     if isinstance(wjson, (bytes, bytearray)):
                         wjson = wjson.decode('utf-8')
                     wd = json.loads(wjson) if isinstance(wjson, str) else wjson
-                    for item in wd.get('content', []):
-                        pid = item.get('account_payment_id')
-                        p = self.env['account.payment'].browse(pid) if pid else False
-                        m = self._determine_move_payment_mode(move, pay_info=item, payment=p)
-                        if m and m not in modes_list:
-                            modes_list.append(m)
+                    widget_content = wd.get('content', []) if wd else []
                 except Exception:
-                    pass
+                    widget_content = []
+            
+            seen_pay_ids = set()
+            for pay_info in widget_content:
+                raw_d = pay_info.get('date')
+                if hasattr(raw_d, 'strftime'):
+                    p_date = raw_d
+                elif isinstance(raw_d, str):
+                    p_date = fields.Date.to_date(raw_d[:10])
+                else:
+                    p_date = False
 
-            for p in (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])):
-                if p.exists() and p.company_id == self.company_id:
-                    m = self._determine_move_payment_mode(move, payment=p)
-                    if m and m not in modes_list:
-                        modes_list.append(m)
+                # RÈGLE FONDAMENTALE : Si le paiement est postérieur à date_end, il n'existait pas encore !
+                if p_date and p_date > self.date_end:
+                    continue
 
-            if not modes_list:
-                modes_list = [self._determine_move_payment_mode(move)]
+                amt = float(pay_info.get('amount') or 0.0) * sign
+                paid_as_of_end += amt
 
-            inv_mode = ' + '.join(modes_list)
+                pid = pay_info.get('account_payment_id')
+                payment = self.env['account.payment'].browse(pid) if pid else False
+                if payment and payment.exists():
+                    seen_pay_ids.add(payment.id)
 
-            # Recherche des informations de chèque / effet si présent
-            if any(m in ('Chèque', 'Effet') for m in modes_list):
-                for p in (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])):
-                    if p.exists() and p.company_id == self.company_id:
-                        p_mode = self._determine_move_payment_mode(move, payment=p)
-                        if p_mode in ('Chèque', 'Effet'):
-                            check_client = getattr(p, 'check_client_name', False) or getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
-                            check_num = getattr(p, 'check_number', False) or getattr(p, 'memo', False) or getattr(move, 'check_number', False) or ''
-                            check_due = getattr(p, 'check_date_due', False) or getattr(move, 'check_date_due', False) or False
-                            break
-                if not check_num and not check_client and wjson:
-                    try:
-                        wd = json.loads(wjson) if isinstance(wjson, str) else wjson
-                        for item in wd.get('content', []):
-                            pid = item.get('account_payment_id')
-                            p = self.env['account.payment'].browse(pid) if pid else False
-                            p_mode = self._determine_move_payment_mode(move, pay_info=item, payment=p)
-                            if p_mode in ('Chèque', 'Effet'):
-                                if p and p.exists():
-                                    check_client = getattr(p, 'check_client_name', False) or getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
-                                    check_num = getattr(p, 'check_number', False) or getattr(p, 'memo', False) or getattr(move, 'check_number', False) or ''
-                                    check_due = getattr(p, 'check_date_due', False) or getattr(move, 'check_date_due', False) or False
-                                break
-                    except Exception:
-                        pass
-                if not check_num and not check_client:
-                    check_client = getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
-                    check_num = getattr(move, 'check_number', False) or ''
-                    check_due = getattr(move, 'check_date_due', False) or False
+                p_mode = self._determine_move_payment_mode(move, pay_info=pay_info, payment=payment)
+                if p_mode and p_mode not in reconciled_modes:
+                    reconciled_modes.append(p_mode)
 
-            due_str = check_due.strftime('%d/%m/%Y') if hasattr(check_due, 'strftime') else (str(check_due) if check_due else '')
-
-            # Extraction des dates de règlement pour traçabilité
-            pay_dates_set = []
-            for p in (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])):
-                if p.exists() and p.date:
-                    d_str = p.date.strftime('%d/%m/%Y')
+                if p_date:
+                    d_str = p_date.strftime('%d/%m/%Y')
                     if d_str not in pay_dates_set:
                         pay_dates_set.append(d_str)
 
-            if not pay_dates_set and move.invoice_payments_widget:
-                try:
-                    wjson = move.invoice_payments_widget
-                    if isinstance(wjson, (bytes, bytearray)):
-                        wjson = wjson.decode('utf-8')
-                    wd = json.loads(wjson) if isinstance(wjson, str) else wjson
-                    for item in wd.get('content', []):
-                        d = item.get('date')
-                        if d:
-                            d_str = d.strftime('%d/%m/%Y') if hasattr(d, 'strftime') else str(d)
-                            if d_str not in pay_dates_set:
-                                pay_dates_set.append(d_str)
-                except Exception:
-                    pass
+                # Informations de chèque / effet ou virement
+                if p_mode in ('Chèque', 'Effet') and not chk_num_pay:
+                    if payment and payment.exists():
+                        chk_num_pay = getattr(payment, 'check_number', False) or getattr(payment, 'memo', False) or ''
+                        chk_client_pay = getattr(payment, 'check_client_name', False) or (payment.partner_id.name if payment.partner_id else '')
+                        chk_due_pay = getattr(payment, 'check_date_due', False) or False
+                elif p_mode == 'Virement' and not chk_num_pay:
+                    if payment and payment.exists():
+                        chk_num_pay = getattr(payment, 'transfer_order_number', False) or getattr(payment, 'check_number', False) or getattr(payment, 'memo', False) or ''
+
+                # Si le paiement a eu lieu pendant la période du rapport, il est encaissé dans cette période
+                if p_date and (self.date_start <= p_date <= self.date_end):
+                    paid_in_period += amt
+                    valid_period_payments.append({
+                        'pay_info': pay_info,
+                        'payment': payment,
+                        'mode': p_mode,
+                        'amount': amt,
+                        'date': p_date,
+                    })
+
+            # Vérification des paiements lettrés non présents dans le widget
+            for p in (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])):
+                if p.exists() and p.company_id == self.company_id and p.id not in seen_pay_ids:
+                    seen_pay_ids.add(p.id)
+                    p_date = p.date
+                    if p_date and p_date > self.date_end:
+                        continue
+                    alloc = self._get_reconciled_amount_between(p, move) * sign
+                    if abs(alloc) > 0.005:
+                        paid_as_of_end += alloc
+                    p_mode = self._determine_move_payment_mode(move, payment=p)
+                    if p_mode and p_mode not in reconciled_modes:
+                        reconciled_modes.append(p_mode)
+                    if p_date:
+                        d_str = p_date.strftime('%d/%m/%Y')
+                        if d_str not in pay_dates_set:
+                            pay_dates_set.append(d_str)
+                    if p_mode in ('Chèque', 'Effet') and not chk_num_pay:
+                        chk_num_pay = getattr(p, 'check_number', False) or getattr(p, 'memo', False) or ''
+                        chk_client_pay = getattr(p, 'check_client_name', False) or (p.partner_id.name if p.partner_id else '')
+                        chk_due_pay = getattr(p, 'check_date_due', False) or False
+                    elif p_mode == 'Virement' and not chk_num_pay:
+                        chk_num_pay = getattr(p, 'transfer_order_number', False) or getattr(p, 'check_number', False) or getattr(p, 'memo', False) or ''
+                    if p_date and (self.date_start <= p_date <= self.date_end) and abs(alloc) > 0.005:
+                        paid_in_period += alloc
+                        valid_period_payments.append({
+                            'pay_info': False,
+                            'payment': p,
+                            'mode': p_mode,
+                            'amount': alloc,
+                            'date': p_date,
+                        })
+
+            # Si le widget et les paiements sont vides mais la facture est comptabilisée comme payée à la date d'émission
+            if not widget_content and not seen_pay_ids and move.payment_state in ('paid', 'in_payment'):
+                if move.date <= self.date_end:
+                    paid_portion = move.amount_total_signed - move.amount_residual_signed
+                    if abs(paid_portion) > 0.005:
+                        paid_as_of_end = paid_portion
+                        if self.date_start <= move.date <= self.date_end:
+                            paid_in_period = paid_portion
+                            f_mode = self._determine_move_payment_mode(move)
+                            valid_period_payments.append({
+                                'pay_info': False,
+                                'payment': False,
+                                'mode': f_mode,
+                                'amount': paid_portion,
+                                'date': move.date,
+                            })
+
+            paid_amount = round(paid_as_of_end, 2)
+            residual = max(0.0, round(abs(move.amount_total_signed) - abs(paid_amount), 2)) * sign
+            total_residual += residual
+
+            if abs(residual) <= 0.005:
+                calc_state = 'Payé'
+            elif abs(paid_amount) > 0.005:
+                calc_state = 'Partiel'
+            else:
+                calc_state = 'Non payé'
 
             payment_date_str = ', '.join(pay_dates_set) if pay_dates_set else False
+
+            if reconciled_modes:
+                modes_list = reconciled_modes
+            else:
+                modes_list = [self._determine_move_payment_mode(move)]
+            inv_mode = ' + '.join(modes_list)
+
+            check_client = chk_client_pay or getattr(move, 'check_client_name', False) or (move.partner_id.name if move.partner_id else '')
+            check_num = chk_num_pay or getattr(move, 'transfer_order_number', False) or getattr(move, 'check_number', False) or ''
+            check_due = chk_due_pay or getattr(move, 'check_date_due', False) or False
+            due_str = check_due.strftime('%d/%m/%Y') if hasattr(check_due, 'strftime') else (str(check_due) if check_due else '')
 
             item_data = {
                 'date': move.date,
@@ -464,8 +521,8 @@ class AccountZReport(models.Model):
                 'tax': move.amount_tax_signed,
                 'total': move.amount_total_signed,
                 'paid': paid_amount,
-                'residual': move.amount_residual_signed,
-                'payment_state': payment_states_map.get(move.payment_state, move.payment_state or 'Non payé')
+                'residual': residual,
+                'payment_state': calc_state
             }
             
             if move.move_type == 'out_invoice':
@@ -506,91 +563,51 @@ class AccountZReport(models.Model):
                 # credit - debit is positive for customer invoice, negative for credit note
                 tax_details[rate]['tax'] += (line.credit - line.debit)
                 
-            # Reconciled payments breakdown
-            paid_portion = (move.amount_total_signed - move.amount_residual_signed)
-            if abs(paid_portion) > 0.005:
-                widget_json = move.invoice_payments_widget
-                widget_allocated = 0.0
-                if widget_json:
-                    try:
-                        if isinstance(widget_json, (bytes, bytearray)):
-                            widget_json = widget_json.decode('utf-8')
-                        wdata = json.loads(widget_json) if isinstance(widget_json, str) else widget_json
-                        content = wdata.get('content', []) if wdata else []
-                        for pay_info in content:
-                            amt = pay_info.get('amount', 0.0) * sign
-                            payment_id = pay_info.get('account_payment_id')
-                            payment = self.env['account.payment'].browse(payment_id) if payment_id else False
-                            mode = self._determine_move_payment_mode(move, pay_info=pay_info, payment=payment)
-                            
-                            p_num = ''
-                            p_client = ''
-                            if mode in ('Chèque', 'Effet'):
-                                if payment and payment.exists():
-                                    p_num = getattr(payment, 'check_number', False) or getattr(payment, 'memo', False) or check_num
-                                    p_client = getattr(payment, 'check_client_name', False) or (payment.partner_id.name if payment.partner_id else check_client)
-                                else:
-                                    p_num = check_num
-                                    p_client = check_client
+            # Reconciled payments breakdown for the period [date_start, date_end]
+            for vp in valid_period_payments:
+                amt = vp['amount']
+                mode = vp['mode']
+                payment = vp['payment']
+                
+                p_num = ''
+                p_client = ''
+                if mode in ('Chèque', 'Effet'):
+                    if payment and payment.exists():
+                        p_num = getattr(payment, 'check_number', False) or getattr(payment, 'memo', False) or check_num
+                        p_client = getattr(payment, 'check_client_name', False) or (payment.partner_id.name if payment.partner_id else check_client)
+                    else:
+                        p_num = check_num
+                        p_client = check_client
 
-                            client_disp = p_client if mode in ('Chèque', 'Effet') else (payment.partner_id.name if payment and payment.partner_id else (move.partner_id.name or 'Client comptoir'))
-                            check_disp = p_num if mode in ('Chèque', 'Effet') else ''
+                client_disp = p_client if mode in ('Chèque', 'Effet') else (payment.partner_id.name if payment and payment.partner_id else (move.partner_id.name or 'Client comptoir'))
+                check_disp = p_num if mode in ('Chèque', 'Effet') else ''
 
-                            payments_by_mode[mode] = payments_by_mode.get(mode, 0.0) + amt
-                            widget_allocated += amt
-                            
-                            detailed_payments.append({
-                                'mode': mode,
-                                'client': client_disp,
-                                'check_number': check_disp,
-                                'amount': amt,
-                                'payment_id': payment.id if payment and payment.exists() else False,
-                                'invoice_id': move.id,
-                                'invoice_name': move.name,
-                            })
+                payments_by_mode[mode] = payments_by_mode.get(mode, 0.0) + amt
+                
+                detailed_payments.append({
+                    'mode': mode,
+                    'client': client_disp,
+                    'check_number': check_disp,
+                    'amount': amt,
+                    'payment_id': payment.id if payment and payment.exists() else False,
+                    'invoice_id': move.id,
+                    'invoice_name': move.name,
+                })
 
-                            if mode in ('Chèque', 'Effet'):
-                                p_due = (payment.check_date_due if payment else False) or getattr(move, 'check_date_due', False) or False
-                                due_disp = p_due.strftime('%d/%m/%Y') if hasattr(p_due, 'strftime') else (str(p_due) if p_due else '-')
-                                cheques_list.append({
-                                    'date': move.date,
-                                    'invoice_name': move.name or '/',
-                                    'partner': move.partner_id.name or 'Client comptoir',
-                                    'check_client_name': client_disp or '-',
-                                    'check_number': check_disp or '-',
-                                    'check_date_due': due_disp,
-                                    'amount': amt,
-                                    'mode': mode,
-                                    'state': 'Encaissé',
-                                })
-                    except Exception:
-                        pass
-                remaining_unallocated = paid_portion - widget_allocated
-                if abs(remaining_unallocated) > 0.005:
-                    fallback_mode = self._determine_move_payment_mode(move)
-                    payments_by_mode[fallback_mode] = payments_by_mode.get(fallback_mode, 0.0) + remaining_unallocated
-                    detailed_payments.append({
-                        'mode': fallback_mode,
-                        'client': check_client if fallback_mode in ('Chèque', 'Effet') else '',
-                        'check_number': check_num if fallback_mode in ('Chèque', 'Effet') else '',
-                        'amount': remaining_unallocated,
-                        'payment_id': False,
-                        'invoice_id': move.id,
-                        'invoice_name': move.name,
+                if mode in ('Chèque', 'Effet') and abs(amt) > 0.005:
+                    p_due = (payment.check_date_due if payment else False) or getattr(move, 'check_date_due', False) or False
+                    due_disp = p_due.strftime('%d/%m/%Y') if hasattr(p_due, 'strftime') else (str(p_due) if p_due else '-')
+                    cheques_list.append({
+                        'date': vp['date'],
+                        'invoice_name': move.name or '/',
+                        'partner': move.partner_id.name or 'Client comptoir',
+                        'check_client_name': client_disp or '-',
+                        'check_number': check_disp or '-',
+                        'check_date_due': due_disp,
+                        'amount': amt,
+                        'mode': mode,
+                        'state': 'Encaissé',
                     })
-                    if fallback_mode in ('Chèque', 'Effet'):
-                        due_disp = check_due.strftime('%d/%m/%Y') if hasattr(check_due, 'strftime') else (str(check_due) if check_due else '-')
-                        cheques_list.append({
-                            'date': move.date,
-                            'invoice_name': move.name or '/',
-                            'partner': move.partner_id.name or 'Client comptoir',
-                            'check_client_name': check_client or (move.partner_id.name or '-'),
-                            'check_number': check_num or '-',
-                            'check_date_due': due_disp,
-                            'amount': remaining_unallocated,
-                            'mode': fallback_mode,
-                            'state': 'Encaissé',
-                        })
 
         # Traçabilité des règlements de factures antérieures (Créances recouvrées durant la période)
         period_payments = self.env['account.payment'].search([

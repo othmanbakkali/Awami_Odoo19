@@ -555,6 +555,11 @@
                                                     <t t-esc="m"/>
                                                 </span>
                                             </t>
+                                            <t t-if="'Virement' in modes and inv.get('check_number')">
+                                                <div style="font-size: 7.5pt; color: #1e3a8a; font-weight: 700; margin-top: 1px;">
+                                                    OV: <t t-esc="inv['check_number']"/>
+                                                </div>
+                                            </t>
                                             <t t-if="'Chèque' in modes or 'Effet' in modes">
                                                 <div t-if="inv.get('check_number')" style="font-size: 7.5pt; color: #2c1810; margin-top: 1px;">
                                                     N°: <strong t-esc="inv['check_number']"/>
