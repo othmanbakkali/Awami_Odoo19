@@ -12,66 +12,15 @@ ssh.connect(HOST, username=USER, password=PASS, timeout=30)
 
 sftp = ssh.open_sftp()
 
-# Check remote directories
-try:
-    sftp.stat("/opt/odoo/custom-addons/etat_vente_journalier_facture")
-    has_lowercase = True
-except Exception:
-    has_lowercase = False
-
-try:
-    sftp.stat("/opt/odoo/custom-addons/Etat_Vente_Journalier_facturé")
-    has_accent = True
-except Exception:
-    has_accent = False
-
-print(f"Remote dirs: etat_vente_journalier_facture: {has_lowercase}, Etat_Vente_Journalier_facturé: {has_accent}")
-
-upload_pairs = [
-    (r"C:\Projects\Awami OUssama\Etat_Vente_Journalier_facturé\models\account_z_report.py",
-     "/opt/odoo/custom-addons/etat_vente_journalier_facture/models/account_z_report.py"),
-    (r"C:\Projects\Awami OUssama\Etat_Vente_Journalier_facturé\report\account_z_report_pdf.xml",
-     "/opt/odoo/custom-addons/etat_vente_journalier_facture/report/account_z_report_pdf.xml"),
-    (r"C:\Projects\Awami OUssama\Report\models\account_sales_expense_report.py",
-     "/opt/odoo/custom-addons/Report/models/account_sales_expense_report.py"),
-    (r"C:\Projects\Awami OUssama\Report\report\report_sales_expense_pdf.xml",
-     "/opt/odoo/custom-addons/Report/report/report_sales_expense_pdf.xml"),
-]
-
-if has_accent:
-    upload_pairs.extend([
-        (r"C:\Projects\Awami OUssama\Etat_Vente_Journalier_facturé\models\account_z_report.py",
-         "/opt/odoo/custom-addons/Etat_Vente_Journalier_facturé/models/account_z_report.py"),
-        (r"C:\Projects\Awami OUssama\Etat_Vente_Journalier_facturé\report\account_z_report_pdf.xml",
-         "/opt/odoo/custom-addons/Etat_Vente_Journalier_facturé/report/account_z_report_pdf.xml"),
-    ])
-
-for local, remote in upload_pairs:
-    print(f"Uploading {local} -> {remote}")
-    sftp.put(local, remote)
-
 remote_script = """
 import odoo
 from odoo.modules.registry import Registry
 from odoo import api, SUPERUSER_ID
 import json
+import base64
 
 odoo.tools.config.parse_config(['-c', '/etc/odoo.conf', '-d', 'Hanouty'])
 reg = Registry('Hanouty')
-
-with reg.cursor() as cr:
-    env = api.Environment(cr, SUPERUSER_ID, {})
-    
-    # Upgrade modules
-    mod_z = env['ir.module.module'].search([('name', '=', 'etat_vente_journalier_facture')])
-    if mod_z:
-        print('Upgrading etat_vente_journalier_facture...')
-        mod_z.button_immediate_upgrade()
-    mod_r = env['ir.module.module'].search([('name', '=', 'Report')])
-    if mod_r:
-        print('Upgrading Report...')
-        mod_r.button_immediate_upgrade()
-    cr.commit()
 
 with reg.cursor() as cr:
     env = api.Environment(cr, SUPERUSER_ID, {})
@@ -80,34 +29,35 @@ with reg.cursor() as cr:
         rep = env['account.z.report'].search([], order='id desc', limit=1)
     print('Report:', rep.name)
     data = rep.get_report_data()
-    print('Ventilation summary:', data['payments_by_mode'])
-    print('Cheques count:', len(data['cheques_list']), 'Cheques sum:', sum(c['amount'] for c in data['cheques_list']))
+    print('Ventilation payments:', [(p['mode'], p['count'], p['amount']) for p in data.get('payments', [])])
+    print('Cheques count:', len(data.get('cheques', [])), 'Cheques sum:', sum(c['amount'] for c in data.get('cheques', [])))
     for inv in data['invoices']:
         if '0008' in inv.get('name', ''):
             print('BL 0008:', inv['name'], 'modes:', inv.get('payment_modes'), 'mode_str:', inv.get('payment_mode'), 'paid:', inv.get('paid'))
             
-    # Render PDF
-    pdf_content, _ = env['ir.actions.report']._render_qweb_pdf('etat_vente_journalier_facture.action_report_account_z_pdf', [rep.id])
+    # Render PDF using action_report_z
+    pdf_content, _ = env['ir.actions.report']._render_qweb_pdf('etat_vente_journalier_facture.action_report_z', [rep.id])
     with open('/tmp/test_z_multi_modes.pdf', 'wb') as f:
         f.write(pdf_content)
     print('PDF rendered successfully, size:', len(pdf_content))
+    
+    # Update snapshot attachment on report record
+    if rep.pdf_attachment_id:
+        rep.pdf_attachment_id.write({'datas': base64.b64encode(pdf_content)})
+        print('Updated rep.pdf_attachment_id datas!')
+    cr.commit()
 """
 
-with sftp.file("/tmp/run_upgrade_and_test.py", "w") as f:
+with sftp.file("/tmp/render_pdf_now.py", "w") as f:
     f.write(remote_script)
 sftp.close()
 
 stdin, stdout, stderr = ssh.exec_command(
-    "su - odoo -s /bin/bash -c 'PYTHONPATH=/opt/odoo/odoo /opt/odoo/odoo-venv/bin/python3 /tmp/run_upgrade_and_test.py'",
-    timeout=120
+    "su - odoo -s /bin/bash -c 'PYTHONPATH=/opt/odoo/odoo /opt/odoo/odoo-venv/bin/python3 /tmp/render_pdf_now.py'",
+    timeout=60
 )
 print("STDOUT:\n", stdout.read().decode('utf-8', errors='ignore'))
 print("STDERR:\n", stderr.read().decode('utf-8', errors='ignore'))
-
-# Restart odoo service
-print("Restarting odoo...")
-stdin, stdout, stderr = ssh.exec_command("systemctl restart odoo")
-stdout.channel.recv_exit_status()
 
 # Download PDF
 sftp = ssh.open_sftp()
