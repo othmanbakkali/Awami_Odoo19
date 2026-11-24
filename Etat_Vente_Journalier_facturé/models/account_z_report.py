@@ -422,16 +422,16 @@ class AccountZReport(models.Model):
                     if payment and payment.exists():
                         chk_num_pay = getattr(payment, 'transfer_order_number', False) or getattr(payment, 'check_number', False) or getattr(payment, 'memo', False) or ''
 
-                # Si le paiement a eu lieu pendant la période du rapport, il est encaissé dans cette période
-                if p_date and (self.date_start <= p_date <= self.date_end):
-                    paid_in_period += amt
-                    valid_period_payments.append({
-                        'pay_info': pay_info,
-                        'payment': payment,
-                        'mode': p_mode,
-                        'amount': amt,
-                        'date': p_date,
-                    })
+                # Règlement valide au plus tard à date_end réglant une facture de la période :
+                # Toujours comptabiliser et afficher par date de BL
+                paid_in_period += amt
+                valid_period_payments.append({
+                    'pay_info': pay_info,
+                    'payment': payment,
+                    'mode': p_mode,
+                    'amount': amt,
+                    'date': move.date, # Toujours afficher par date de BL
+                })
 
             # Vérification des paiements lettrés non présents dans le widget
             for p in (getattr(move, 'matched_payment_ids', self.env['account.payment']) | getattr(move, 'reconciled_payment_ids', self.env['account.payment'])):
@@ -456,14 +456,14 @@ class AccountZReport(models.Model):
                         chk_due_pay = getattr(p, 'check_date_due', False) or False
                     elif p_mode == 'Virement' and not chk_num_pay:
                         chk_num_pay = getattr(p, 'transfer_order_number', False) or getattr(p, 'check_number', False) or getattr(p, 'memo', False) or ''
-                    if p_date and (self.date_start <= p_date <= self.date_end) and abs(alloc) > 0.005:
+                    if abs(alloc) > 0.005:
                         paid_in_period += alloc
                         valid_period_payments.append({
                             'pay_info': False,
                             'payment': p,
                             'mode': p_mode,
                             'amount': alloc,
-                            'date': p_date,
+                            'date': move.date, # Toujours afficher par date de BL
                         })
 
             # Si le widget et les paiements sont vides mais la facture est comptabilisée comme payée à la date d'émission

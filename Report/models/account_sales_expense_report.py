@@ -504,11 +504,12 @@ class AccountSalesExpenseReport(models.Model):
                         for pinfo in wd.get('content', []):
                             pid = pinfo.get('account_payment_id')
                             pay = self.env['account.payment'].browse(pid) if pid else False
-                            # Account payments are aggregated below using their payment date.
-                            if pay and pay.exists():
-                                continue
                             payment_date = str(pinfo.get('date') or '')[:10]
-                            if not payment_date or not (str(self.date_start) <= payment_date <= str(self.date_end)):
+                            if payment_date and payment_date > str(self.date_end):
+                                continue
+                            # Si le paiement est dans la période, period_payments s'en charge ci-dessous
+                            # MAIS si le paiement est un acompte/avance antérieur (< date_start), il règle ce BL de la période
+                            if pay and pay.exists() and payment_date and (str(self.date_start) <= payment_date <= str(self.date_end)):
                                 continue
                             amt = pinfo.get('amount', 0.0) * sign
                             pmode = self._determine_move_payment_mode(move, pay_info=pinfo, payment=pay)
@@ -644,7 +645,7 @@ class AccountSalesExpenseReport(models.Model):
 
                 if pay_mode_label in ('Chèque', 'Effet') and signed_alloc > 0.005:
                     cheques_list.append({
-                        'date': pay.date,
+                        'date': inv.date if inv in current_invs else pay.date, # Toujours afficher par date de BL
                         'invoice_name': invoice_label,
                         'partner': inv.partner_id.name or pay.partner_id.name or 'Client divers',
                         'check_client_name': chk_client or (pay.partner_id.name if pay.partner_id else '-'),
